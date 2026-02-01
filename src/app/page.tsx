@@ -1,103 +1,195 @@
-import Image from "next/image";
+import { Sidebar } from "@/components/layout/Sidebar";
+import { Header } from "@/components/layout/Header";
+import { CheckCircle2, Circle, Calendar, Tag } from "lucide-react";
 
 export default function Home() {
   return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
+    <div className="min-h-screen bg-background">
+      <Sidebar />
+      
+      <main className="ml-sidebar-width">
+        <Header 
+          title="Heute" 
+          subtitle="Mittwoch, 29. Januar 2026" 
         />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+        
+        <div className="p-6">
+          {/* Überfällig Section */}
+          <section className="mb-6">
+            <h2 className="text-sm font-semibold text-error mb-3 flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-error" />
+              Überfällig (2)
+            </h2>
+            <div className="bg-surface rounded-xl shadow-sm border border-border">
+              <TaskItem 
+                title="Quartalsbericht fertigstellen"
+                project="Marketing Q1"
+                projectColor="#059669"
+                dueDate="Gestern"
+                priority="p1"
+                overdue
+              />
+              <TaskItem 
+                title="Kundenpräsentation vorbereiten"
+                project="Website Relaunch"
+                projectColor="#3b82f6"
+                dueDate="Vor 2 Tagen"
+                priority="p2"
+                overdue
+              />
+            </div>
+          </section>
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+          {/* Heute Section */}
+          <section>
+            <h2 className="text-sm font-semibold text-text-secondary mb-3 flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-primary" />
+              Heute (4)
+            </h2>
+            <div className="bg-surface rounded-xl shadow-sm border border-border">
+              <TaskItem 
+                title="Daily Standup Meeting"
+                project="Entwicklung"
+                projectColor="#3b82f6"
+                dueDate="09:00"
+                labels={["Meeting"]}
+              />
+              <TaskItem 
+                title="API Dokumentation aktualisieren"
+                project="Website Relaunch"
+                projectColor="#3b82f6"
+                priority="p2"
+                subtasks="2/4"
+              />
+              <TaskItem 
+                title="Design-Review mit Team"
+                project="Website Relaunch"
+                projectColor="#3b82f6"
+                dueDate="14:00"
+                assignees={["AS", "TM"]}
+              />
+              <TaskItem 
+                title="E-Mails beantworten"
+                project="Inbox"
+                projectColor="#6b7280"
+                priority="p3"
+                recurring
+                isLast
+              />
+            </div>
+          </section>
+
+          {/* Add Task */}
+          <button className="mt-4 w-full flex items-center gap-3 px-4 py-3 border-2 border-dashed border-border rounded-xl text-text-muted hover:border-primary hover:text-primary transition-colors">
+            <span className="text-lg">+</span>
+            <span>Aufgabe hinzufügen</span>
+          </button>
         </div>
       </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+    </div>
+  );
+}
+
+interface TaskItemProps {
+  title: string;
+  project: string;
+  projectColor: string;
+  dueDate?: string;
+  priority?: "p1" | "p2" | "p3" | "p4";
+  labels?: string[];
+  subtasks?: string;
+  assignees?: string[];
+  recurring?: boolean;
+  overdue?: boolean;
+  isLast?: boolean;
+}
+
+function TaskItem({ 
+  title, 
+  project, 
+  projectColor, 
+  dueDate, 
+  priority,
+  labels,
+  subtasks,
+  assignees,
+  recurring,
+  overdue,
+  isLast 
+}: TaskItemProps) {
+  const priorityColors = {
+    p1: "border-error text-error",
+    p2: "border-warning text-warning",
+    p3: "border-info text-info",
+    p4: "border-border text-text-muted",
+  };
+
+  return (
+    <div className={`flex items-center gap-4 px-4 py-3 hover:bg-primary-bg/50 transition-colors ${!isLast ? "border-b border-divider" : ""}`}>
+      {/* Checkbox */}
+      <button className={`w-5 h-5 rounded-full border-2 flex-shrink-0 hover:bg-primary-surface/50 transition-colors ${priority ? priorityColors[priority] : "border-border"}`}>
+      </button>
+      
+      {/* Content */}
+      <div className="flex-1 min-w-0">
+        <div className="text-sm font-medium text-text-primary">{title}</div>
+        <div className="flex items-center gap-2 mt-0.5 text-xs text-text-muted">
+          {dueDate && (
+            <span className={overdue ? "text-error" : ""}>{dueDate}</span>
+          )}
+          {dueDate && <span>·</span>}
+          <span className="flex items-center gap-1">
+            <span 
+              className="w-2 h-2 rounded-sm" 
+              style={{ backgroundColor: projectColor }}
+            />
+            {project}
+          </span>
+          {recurring && (
+            <>
+              <span>·</span>
+              <span>🔄</span>
+            </>
+          )}
+          {labels?.map((label) => (
+            <span 
+              key={label}
+              className="px-1.5 py-0.5 rounded bg-info-light text-info text-[10px] font-medium"
+            >
+              {label}
+            </span>
+          ))}
+          {priority && (
+            <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${
+              priority === "p1" ? "bg-error-light text-error" :
+              priority === "p2" ? "bg-warning-light text-warning" :
+              priority === "p3" ? "bg-info-light text-info" :
+              "bg-divider text-text-muted"
+            }`}>
+              {priority.toUpperCase()}
+            </span>
+          )}
+        </div>
+      </div>
+
+      {/* Right side */}
+      <div className="flex items-center gap-2">
+        {subtasks && (
+          <span className="text-xs text-text-muted">{subtasks}</span>
+        )}
+        {assignees && (
+          <div className="flex -space-x-1">
+            {assignees.map((initials) => (
+              <div 
+                key={initials}
+                className="w-6 h-6 rounded-full bg-primary-surface text-primary text-[10px] font-medium flex items-center justify-center border-2 border-surface"
+              >
+                {initials}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
