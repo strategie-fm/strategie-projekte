@@ -1,19 +1,22 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   Inbox,
   Calendar,
   CalendarDays,
   Search,
-  Settings,
   Plus,
   FolderKanban,
   Users,
   ChevronDown,
+  LogOut,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/lib/supabase";
+import type { User } from "@supabase/supabase-js";
 
 const navigation = [
   { name: "Inbox", href: "/inbox", icon: Inbox },
@@ -30,6 +33,29 @@ const projects = [
 
 export function Sidebar() {
   const pathname = usePathname();
+  const router = useRouter();
+  const [user, setUser] = useState<User | null>(null);
+
+  useEffect(() => {
+    // Get initial user
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      setUser(user);
+    });
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        setUser(session?.user ?? null);
+      }
+    );
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+    router.push("/login");
+  };
 
   return (
     <aside className="fixed left-0 top-0 h-screen w-sidebar-width bg-sidebar-bg flex flex-col">
@@ -142,17 +168,25 @@ export function Sidebar() {
 
       {/* User Section */}
       <div className="p-3 border-t border-sidebar-hover">
-        <div className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-sidebar-hover cursor-pointer transition-colors">
+        <div className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-sidebar-hover cursor-pointer transition-colors group">
           <div className="w-8 h-8 rounded-full bg-primary-surface text-primary flex items-center justify-center text-sm font-medium">
-            JM
+            {user?.email?.charAt(0).toUpperCase() || "?"}
           </div>
           <div className="flex-1 min-w-0">
             <div className="text-sm font-medium text-sidebar-text-active truncate">
-              Jörg Mustermann
+              {user?.user_metadata?.full_name || user?.email?.split("@")[0] || "User"}
             </div>
-            <div className="text-xs text-sidebar-text/60">Admin</div>
+            <div className="text-xs text-sidebar-text/60">
+              {user?.email || ""}
+            </div>
           </div>
-          <Settings className="w-4 h-4 text-sidebar-text/60" />
+          <button
+            onClick={handleSignOut}
+            className="p-1 rounded opacity-0 group-hover:opacity-100 hover:bg-sidebar-active transition-all"
+            title="Abmelden"
+          >
+            <LogOut className="w-4 h-4 text-sidebar-text/60" />
+          </button>
         </div>
       </div>
     </aside>
