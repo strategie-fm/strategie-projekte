@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { GripVertical, RotateCcw, ListTodo, Play } from "lucide-react";
-import { updateTask, getTaskAssignees } from "@/lib/database";
+import { updateTask, getTaskAssignees, completeRecurringTask } from "@/lib/database";
 import type { TaskWithRelations, TaskAssignee } from "@/types/database";
 import { cn } from "@/lib/utils";
 
@@ -12,6 +12,7 @@ interface SortableTaskItemProps {
   task: TaskWithRelations;
   onUpdate?: (task: TaskWithRelations) => void;
   onClick?: (task: TaskWithRelations) => void;
+  onNewRecurringTask?: (task: TaskWithRelations) => void;
   showProject?: boolean;
   isDragging?: boolean;
 }
@@ -20,10 +21,10 @@ export function SortableTaskItem({
   task,
   onUpdate,
   onClick,
+  onNewRecurringTask,
   showProject = true,
   isDragging,
 }: SortableTaskItemProps) {
-  const [isUpdating, setIsUpdating] = useState(false);
   const [assignees, setAssignees] = useState<TaskAssignee[]>([]);
   const isCompleted = task.status === "done";
 
@@ -69,14 +70,36 @@ export function SortableTaskItem({
       newStatus = "todo";
     }
     
-    const updated = await updateTask(task.id, { 
-      status: newStatus,
-      completed_at: newStatus === "done" ? new Date().toISOString() : null
-    });
-    
-    if (updated && onUpdate) {
-      onUpdate({ ...task, ...updated });
-      window.dispatchEvent(new Event("taskUpdated"));
+    // Wenn Aufgabe als erledigt markiert wird und wiederkehrend ist
+    if (newStatus === "done" && task.is_recurring) {
+      // Erst die aktuelle Aufgabe als erledigt markieren
+      const updated = await updateTask(task.id, { 
+        status: newStatus,
+        completed_at: new Date().toISOString()
+      });
+      
+      if (updated && onUpdate) {
+        onUpdate({ ...task, ...updated });
+        
+        // Dann neue wiederkehrende Aufgabe erstellen
+        const newTask = await completeRecurringTask(task.id);
+        if (newTask && onNewRecurringTask) {
+          onNewRecurringTask(newTask);
+        }
+        
+        window.dispatchEvent(new Event("taskUpdated"));
+      }
+    } else {
+      // Normale Status-Änderung
+      const updated = await updateTask(task.id, { 
+        status: newStatus,
+        completed_at: newStatus === "done" ? new Date().toISOString() : null
+      });
+      
+      if (updated && onUpdate) {
+        onUpdate({ ...task, ...updated });
+        window.dispatchEvent(new Event("taskUpdated"));
+      }
     }
   };
 
@@ -250,7 +273,7 @@ export function SortableTaskItem({
 
           {/* Recurring */}
           {task.is_recurring && (
-            <RotateCcw className="w-3 h-3 text-text-muted" />
+            <RotateCcw className="w-3 h-3 text-primary" title="Wiederkehrende Aufgabe" />
           )}
 
           {/* Priority Badge */}

@@ -11,7 +11,6 @@ import {
   useSensors,
   DragStartEvent,
   DragEndEvent,
-  DragOverEvent,
 } from "@dnd-kit/core";
 import {
   SortableContext,
@@ -23,7 +22,6 @@ import { DroppableSection } from "./DroppableSection";
 import { SortableTaskItem } from "@/components/tasks/SortableTaskItem";
 import type { Section } from "@/types/database";
 import type { TaskWithRelations } from "@/types/database";
-import { cn } from "@/lib/utils";
 
 interface SectionListProps {
   projectId: string;
@@ -33,6 +31,7 @@ interface SectionListProps {
   onTaskUpdate: (task: TaskWithRelations) => void;
   onTaskClick: (task: TaskWithRelations) => void;
   onTasksReorder: (tasks: TaskWithRelations[]) => void;
+  onNewRecurringTask?: (task: TaskWithRelations) => void;
 }
 
 export function SectionList({
@@ -43,6 +42,7 @@ export function SectionList({
   onTaskUpdate,
   onTaskClick,
   onTasksReorder,
+  onNewRecurringTask,
 }: SectionListProps) {
   const [showNewSection, setShowNewSection] = useState(false);
   const [newSectionName, setNewSectionName] = useState("");
@@ -76,10 +76,6 @@ export function SectionList({
     if (task) {
       setActiveTask(task);
     }
-  };
-
-  const handleDragOver = (event: DragOverEvent) => {
-    // Optional: Visual feedback during drag
   };
 
   const handleDragEnd = async (event: DragEndEvent) => {
@@ -180,7 +176,6 @@ export function SectionList({
       sensors={sensors}
       collisionDetection={closestCorners}
       onDragStart={handleDragStart}
-      onDragOver={handleDragOver}
       onDragEnd={handleDragEnd}
     >
       <div className="space-y-4">
@@ -199,6 +194,7 @@ export function SectionList({
                       task={task}
                       onUpdate={onTaskUpdate}
                       onClick={onTaskClick}
+                      onNewRecurringTask={onNewRecurringTask}
                       showProject={false}
                     />
                   ))}
@@ -305,6 +301,7 @@ export function SectionList({
                             task={task}
                             onUpdate={onTaskUpdate}
                             onClick={onTaskClick}
+                            onNewRecurringTask={onNewRecurringTask}
                             showProject={false}
                           />
                         ))

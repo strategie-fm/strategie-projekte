@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Header } from "@/components/layout/Header";
@@ -37,10 +37,10 @@ export default function ProjectPage() {
     status: [],
   });
 
-  const loadData = async () => {
-  setLoading(true);
+  const loadData = useCallback(async () => {
+    setLoading(true);
 
-  const [projectData, tasksData, sectionsData, labelsData] = await Promise.all([
+    const [projectData, tasksData, sectionsData, labelsData] = await Promise.all([
       getProject(projectId),
       getTasksByProject(projectId),
       getSections(projectId),
@@ -52,13 +52,13 @@ export default function ProjectPage() {
     setSections(sectionsData);
     setLabels(labelsData);
     setLoading(false);
-  };
+  }, [projectId]);
 
   useEffect(() => {
     if (projectId) {
       loadData();
     }
-  }, [projectId]);
+  }, [projectId, loadData]);
 
   const handleTaskUpdate = (updatedTask: TaskWithRelations) => {
     setTasks((prev) =>
@@ -76,6 +76,11 @@ export default function ProjectPage() {
 
   const handleTaskCreated = () => {
     loadData();
+  };
+
+  const handleNewRecurringTask = (newTask: TaskWithRelations) => {
+    // Füge die neue wiederkehrende Aufgabe zur Liste hinzu
+    setTasks((prev) => [newTask, ...prev]);
   };
 
   const handleProjectUpdate = (updatedProject: Project) => {
@@ -243,6 +248,7 @@ export default function ProjectPage() {
                   const unchangedTasks = tasks.filter(t => !filteredIds.has(t.id));
                   setTasks([...unchangedTasks, ...reorderedTasks]);
                 }}
+                onNewRecurringTask={handleNewRecurringTask}
               />
 
               {/* Completed Tasks */}
@@ -258,6 +264,7 @@ export default function ProjectPage() {
                         task={task}
                         onUpdate={handleTaskUpdate}
                         onClick={setSelectedTask}
+                        onNewRecurringTask={handleNewRecurringTask}
                         showProject={false}
                       />
                     ))}
@@ -286,6 +293,7 @@ export default function ProjectPage() {
                             task={task}
                             onUpdate={handleTaskUpdate}
                             onClick={setSelectedTask}
+                            onNewRecurringTask={handleNewRecurringTask}
                             showProject={false}
                           />
                         ))}
@@ -318,6 +326,7 @@ export default function ProjectPage() {
         onClose={() => setSelectedTask(null)}
         onUpdate={handleTaskUpdate}
         onDelete={handleTaskDelete}
+        onNewRecurringTask={handleNewRecurringTask}
       />
 
       {/* Project Settings Modal */}
