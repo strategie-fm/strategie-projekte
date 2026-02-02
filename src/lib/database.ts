@@ -1174,7 +1174,16 @@ export async function getUserTeams(userId: string): Promise<Team[]> {
     return [];
   }
 
-  return data?.map((d) => d.team).filter(Boolean) as Team[] || [];
+  if (!data) return [];
+  
+  const teams: Team[] = [];
+  data.forEach((d) => {
+    if (d.team && typeof d.team === 'object' && !Array.isArray(d.team)) {
+      teams.push(d.team as Team);
+    }
+  });
+  
+  return teams;
 }
 
 // ============================================
