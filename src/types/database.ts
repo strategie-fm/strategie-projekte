@@ -147,8 +147,6 @@ export interface ProjectTeamAccess {
   team?: Team;
 }
 
-export type RecurrenceType = "daily" | "weekly" | "monthly" | "yearly" | "custom";
-
 export interface TaskRecurrence {
   id: string;
   task_id: string;
