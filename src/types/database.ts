@@ -55,21 +55,17 @@ export interface Task {
   id: string;
   title: string;
   description: string | null;
-  priority: TaskPriority;
-  status: TaskStatus;
+  status: "todo" | "in_progress" | "done" | "archived";
+  priority: "p1" | "p2" | "p3" | "p4";
   due_date: string | null;
-  due_time: string | null;
   completed_at: string | null;
-  is_recurring: boolean;
-  recurrence_type: RecurrenceType | null;
-  recurrence_interval: number;
-  recurrence_days: number[] | null;
-  recurrence_end: string | null;
-  parent_task_id: string | null;
   position: number;
-  created_by: string | null;
+  parent_task_id: string | null;
+  section_id: string | null;
+  created_by: string;
   created_at: string;
   updated_at: string;
+  is_recurring?: boolean;
 }
 
 export interface TaskWithRelations extends Task {
