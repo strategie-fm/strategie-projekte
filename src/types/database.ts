@@ -3,14 +3,16 @@ export type TaskStatus = "todo" | "in_progress" | "done" | "archived";
 export type TaskPriority = "p1" | "p2" | "p3" | "p4";
 export type ProjectRole = "owner" | "editor" | "viewer";
 export type RecurrenceType = "daily" | "weekly" | "monthly" | "yearly" | "custom";
+export type TeamRole = "owner" | "admin" | "member" | "viewer";
+export type AccessLevel = "view" | "edit" | "admin";
 
 export interface Profile {
   id: string;
   email: string;
   full_name: string | null;
   avatar_url: string | null;
-  role: UserRole;
-  settings: Record<string, unknown>;
+  role?: UserRole | string;
+  settings?: Record<string, unknown>;
   created_at: string;
   updated_at: string;
 }
@@ -19,6 +21,7 @@ export interface Team {
   id: string;
   name: string;
   description: string | null;
+  color: string;
   avatar_url: string | null;
   created_by: string | null;
   created_at: string;
@@ -55,8 +58,8 @@ export interface Task {
   id: string;
   title: string;
   description: string | null;
-  status: "todo" | "in_progress" | "done" | "archived";
-  priority: "p1" | "p2" | "p3" | "p4";
+  status: TaskStatus;
+  priority: TaskPriority;
   due_date: string | null;
   completed_at: string | null;
   position: number;
@@ -112,39 +115,13 @@ export interface Notification {
   created_at: string;
 }
 
-export interface Profile {
-  id: string;
-  email: string;
-  full_name: string | null;
-  avatar_url: string | null;
-  role?: string;
-  created_at: string;
-  updated_at: string;
-}
-
 export interface TaskAssignee {
   id: string;
   task_id: string;
   user_id: string;
   assigned_by: string | null;
   assigned_at: string;
-  // Joined data
   profile?: Profile;
-}
-
-// Team Types
-export type TeamRole = "owner" | "admin" | "member" | "viewer";
-export type AccessLevel = "view" | "edit" | "admin";
-
-export interface Team {
-  id: string;
-  name: string;
-  description: string | null;
-  color: string;
-  avatar_url: string | null;
-  created_by: string;
-  created_at: string;
-  updated_at: string;
 }
 
 export interface TeamMember {
