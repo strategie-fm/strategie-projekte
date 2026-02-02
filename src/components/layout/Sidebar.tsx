@@ -16,7 +16,9 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/lib/supabase";
+import { getProjects, createProject } from "@/lib/database";
 import type { User } from "@supabase/supabase-js";
+import type { Project } from "@/types/database";
 
 const navigation = [
   { name: "Inbox", href: "/inbox", icon: Inbox },
@@ -25,16 +27,14 @@ const navigation = [
   { name: "Suche", href: "/search", icon: Search },
 ];
 
-const projects = [
-  { name: "Website Relaunch", href: "/projects/1", color: "#3b82f6" },
-  { name: "Marketing Q1", href: "/projects/2", color: "#059669" },
-  { name: "Produkt-Roadmap", href: "/projects/3", color: "#f59e0b" },
-];
-
 export function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [showNewProject, setShowNewProject] = useState(false);
+  const [newProjectName, setNewProjectName] = useState("");
+  const [isCreating, setIsCreating] = useState(false);
 
   useEffect(() => {
     // Get initial user
@@ -52,9 +52,44 @@ export function Sidebar() {
     return () => subscription.unsubscribe();
   }, []);
 
+  useEffect(() => {
+    // Load projects when user is available
+    if (user) {
+      loadProjects();
+    }
+  }, [user]);
+
+  const loadProjects = async () => {
+    const data = await getProjects();
+    setProjects(data);
+  };
+
   const handleSignOut = async () => {
     await supabase.auth.signOut();
     router.push("/login");
+  };
+
+  const handleCreateProject = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newProjectName.trim() || isCreating) return;
+
+    setIsCreating(true);
+    const project = await createProject({
+      name: newProjectName.trim(),
+      color: getRandomColor(),
+    });
+
+    if (project) {
+      setProjects([...projects, project]);
+      setNewProjectName("");
+      setShowNewProject(false);
+    }
+    setIsCreating(false);
+  };
+
+  const getRandomColor = () => {
+    const colors = ["#3b82f6", "#059669", "#f59e0b", "#8b5cf6", "#ec4899", "#14b8a6"];
+    return colors[Math.floor(Math.random() * colors.length)];
   };
 
   return (
@@ -108,32 +143,67 @@ export function Sidebar() {
             <span className="text-xs font-medium text-sidebar-text/60 uppercase tracking-wider">
               Projekte
             </span>
-            <button className="p-1 rounded hover:bg-sidebar-hover text-sidebar-text/60 hover:text-sidebar-text-active">
+            <button 
+              onClick={() => setShowNewProject(true)}
+              className="p-1 rounded hover:bg-sidebar-hover text-sidebar-text/60 hover:text-sidebar-text-active"
+            >
               <Plus className="w-4 h-4" />
             </button>
           </div>
+
+          {/* New Project Input */}
+          {showNewProject && (
+            <form onSubmit={handleCreateProject} className="px-2 mb-2">
+              <input
+                type="text"
+                value={newProjectName}
+                onChange={(e) => setNewProjectName(e.target.value)}
+                placeholder="Projektname..."
+                className="w-full px-3 py-1.5 text-sm bg-white/10 border border-sidebar-hover rounded-lg text-white placeholder:text-sidebar-text/50 focus:outline-none focus:border-white/30"
+                autoFocus
+                onBlur={() => {
+                  if (!newProjectName.trim()) {
+                    setShowNewProject(false);
+                  }
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Escape") {
+                    setShowNewProject(false);
+                    setNewProjectName("");
+                  }
+                }}
+              />
+            </form>
+          )}
+
           <div className="space-y-1">
-            {projects.map((project) => {
-              const isActive = pathname === project.href;
-              return (
-                <Link
-                  key={project.name}
-                  href={project.href}
-                  className={cn(
-                    "flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors",
-                    isActive
-                      ? "bg-sidebar-active text-sidebar-text-active"
-                      : "text-sidebar-text hover:bg-sidebar-hover hover:text-sidebar-text-active"
-                  )}
-                >
-                  <span
-                    className="w-2.5 h-2.5 rounded-sm"
-                    style={{ backgroundColor: project.color }}
-                  />
-                  <span className="truncate">{project.name}</span>
-                </Link>
-              );
-            })}
+            {projects.length === 0 && !showNewProject ? (
+              <p className="px-3 py-2 text-sm text-sidebar-text/50">
+                Noch keine Projekte
+              </p>
+            ) : (
+              projects.map((project) => {
+                const isActive = pathname === `/projects/${project.id}`;
+                return (
+                  <Link
+                    key={project.id}
+                    href={`/projects/${project.id}`}
+                    className={cn(
+                      "flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors",
+                      isActive
+                        ? "bg-sidebar-active text-sidebar-text-active"
+                        : "text-sidebar-text hover:bg-sidebar-hover hover:text-sidebar-text-active"
+                    )}
+                  >
+                    <span
+                      className="w-2.5 h-2.5 rounded-sm flex-shrink-0"
+                      style={{ backgroundColor: project.color }}
+                    />
+                    <span className="truncate">{project.name}</span>
+                  </Link>
+                );
+              })
+            )}
           </div>
         </div>
 
@@ -148,20 +218,9 @@ export function Sidebar() {
             </button>
           </div>
           <div className="space-y-1">
-            <Link
-              href="/teams/1"
-              className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-sidebar-text hover:bg-sidebar-hover hover:text-sidebar-text-active transition-colors"
-            >
-              <Users className="w-5 h-5" />
-              <span>Entwicklung</span>
-            </Link>
-            <Link
-              href="/teams/2"
-              className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-sidebar-text hover:bg-sidebar-hover hover:text-sidebar-text-active transition-colors"
-            >
-              <Users className="w-5 h-5" />
-              <span>Marketing</span>
-            </Link>
+            <div className="px-3 py-2 text-sm text-sidebar-text/50">
+              Noch keine Teams
+            </div>
           </div>
         </div>
       </nav>
@@ -176,7 +235,7 @@ export function Sidebar() {
             <div className="text-sm font-medium text-sidebar-text-active truncate">
               {user?.user_metadata?.full_name || user?.email?.split("@")[0] || "User"}
             </div>
-            <div className="text-xs text-sidebar-text/60">
+            <div className="text-xs text-sidebar-text/60 truncate">
               {user?.email || ""}
             </div>
           </div>

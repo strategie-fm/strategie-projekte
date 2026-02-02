@@ -1,0 +1,103 @@
+export type UserRole = "admin" | "manager" | "member";
+export type TaskStatus = "todo" | "in_progress" | "done" | "archived";
+export type TaskPriority = "p1" | "p2" | "p3" | "p4";
+export type ProjectRole = "owner" | "editor" | "viewer";
+export type RecurrenceType = "daily" | "weekly" | "monthly" | "yearly" | "custom";
+
+export interface Profile {
+  id: string;
+  email: string;
+  full_name: string | null;
+  avatar_url: string | null;
+  role: UserRole;
+  settings: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Team {
+  id: string;
+  name: string;
+  description: string | null;
+  avatar_url: string | null;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Project {
+  id: string;
+  name: string;
+  description: string | null;
+  color: string;
+  icon: string | null;
+  team_id: string | null;
+  parent_id: string | null;
+  is_inbox: boolean;
+  position: number;
+  archived_at: string | null;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Task {
+  id: string;
+  title: string;
+  description: string | null;
+  priority: TaskPriority;
+  status: TaskStatus;
+  due_date: string | null;
+  due_time: string | null;
+  completed_at: string | null;
+  is_recurring: boolean;
+  recurrence_type: RecurrenceType | null;
+  recurrence_interval: number;
+  recurrence_days: number[] | null;
+  recurrence_end: string | null;
+  parent_task_id: string | null;
+  position: number;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface TaskWithRelations extends Task {
+  projects?: Project[];
+  assignees?: Profile[];
+  labels?: Label[];
+  subtasks?: Task[];
+}
+
+export interface Label {
+  id: string;
+  name: string;
+  color: string;
+  team_id: string | null;
+  created_by: string | null;
+  created_at: string;
+}
+
+export interface Comment {
+  id: string;
+  task_id: string;
+  user_id: string | null;
+  content: string;
+  mentions: string[] | null;
+  edited_at: string | null;
+  created_at: string;
+  user?: Profile;
+}
+
+export interface Notification {
+  id: string;
+  user_id: string;
+  type: string;
+  title: string;
+  body: string | null;
+  task_id: string | null;
+  project_id: string | null;
+  actor_id: string | null;
+  read_at: string | null;
+  created_at: string;
+}
