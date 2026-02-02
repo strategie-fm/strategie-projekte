@@ -146,3 +146,22 @@ export interface ProjectTeamAccess {
   granted_at: string;
   team?: Team;
 }
+
+export type RecurrenceType = "daily" | "weekly" | "monthly" | "yearly" | "custom";
+
+export interface TaskRecurrence {
+  id: string;
+  task_id: string;
+  recurrence_type: RecurrenceType;
+  interval_value: number;
+  weekdays: number[] | null;
+  month_day: number | null;
+  year_month: number | null;
+  year_day: number | null;
+  end_date: string | null;
+  end_after_count: number | null;
+  completed_count: number;
+  next_due_date: string | null;
+  created_at: string;
+  updated_at: string;
+}

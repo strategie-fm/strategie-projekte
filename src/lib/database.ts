@@ -1,5 +1,5 @@
 import { supabase } from "./supabase";
-import type { Project, Task, TaskWithRelations, Label, Comment, Section, Profile, TaskAssignee } from "@/types/database";
+import type { Project, Task, TaskWithRelations, Label, Comment, Section, Profile, TaskAssignee, TaskRecurrence, RecurrenceType } from "@/types/database";
 
 // ============================================
 // PROJECTS
@@ -1269,3 +1269,375 @@ export async function revokeProjectAccess(projectId: string, teamId: string): Pr
 
   return true;
 }
+
+export async function getTaskRecurrence(taskId: string): Promise<TaskRecurrence | null> {
+  const { data, error } = await supabase
+    .from("task_recurrence")
+    .select("*")
+    .eq("task_id", taskId)
+    .single();
+
+  if (error) {
+    if (error.code !== "PGRST116") { // Not found is OK
+      console.error("Error fetching task recurrence:", error);
+    }
+    return null;
+  }
+
+  return data;
+}
+
+export async function createTaskRecurrence(recurrence: {
+  task_id: string;
+  recurrence_type: RecurrenceType;
+  interval_value?: number;
+  weekdays?: number[] | null;
+  month_day?: number | null;
+  year_month?: number | null;
+  year_day?: number | null;
+  end_date?: string | null;
+  end_after_count?: number | null;
+  next_due_date?: string | null;
+}): Promise<TaskRecurrence | null> {
+  const { data, error } = await supabase
+    .from("task_recurrence")
+    .insert({
+      task_id: recurrence.task_id,
+      recurrence_type: recurrence.recurrence_type,
+      interval_value: recurrence.interval_value || 1,
+      weekdays: recurrence.weekdays || null,
+      month_day: recurrence.month_day || null,
+      year_month: recurrence.year_month || null,
+      year_day: recurrence.year_day || null,
+      end_date: recurrence.end_date || null,
+      end_after_count: recurrence.end_after_count || null,
+      next_due_date: recurrence.next_due_date || null,
+    })
+    .select()
+    .single();
+
+  if (error) {
+    console.error("Error creating task recurrence:", error);
+    return null;
+  }
+
+  // Update task to mark as recurring
+  await supabase
+    .from("tasks")
+    .update({ is_recurring: true })
+    .eq("id", recurrence.task_id);
+
+  return data;
+}
+
+export async function updateTaskRecurrence(
+  taskId: string,
+  updates: Partial<Omit<TaskRecurrence, "id" | "task_id" | "created_at" | "updated_at">>
+): Promise<TaskRecurrence | null> {
+  const { data, error } = await supabase
+    .from("task_recurrence")
+    .update({ ...updates, updated_at: new Date().toISOString() })
+    .eq("task_id", taskId)
+    .select()
+    .single();
+
+  if (error) {
+    console.error("Error updating task recurrence:", error);
+    return null;
+  }
+
+  return data;
+}
+
+export async function deleteTaskRecurrence(taskId: string): Promise<boolean> {
+  const { error } = await supabase
+    .from("task_recurrence")
+    .delete()
+    .eq("task_id", taskId);
+
+  if (error) {
+    console.error("Error deleting task recurrence:", error);
+    return false;
+  }
+
+  // Update task to mark as not recurring
+  await supabase
+    .from("tasks")
+    .update({ is_recurring: false })
+    .eq("id", taskId);
+
+  return true;
+}
+
+// Hilfsfunktion: Berechnet das nächste Fälligkeitsdatum
+export function calculateNextDueDate(
+  currentDueDate: string,
+  recurrenceType: RecurrenceType,
+  intervalValue: number,
+  weekdays?: number[] | null,
+  monthDay?: number | null
+): string {
+  const current = new Date(currentDueDate);
+  let next = new Date(current);
+
+  switch (recurrenceType) {
+    case "daily":
+      next.setDate(next.getDate() + intervalValue);
+      break;
+
+    case "weekly":
+      if (weekdays && weekdays.length > 0) {
+        // Finde den nächsten passenden Wochentag
+        let found = false;
+        for (let i = 1; i <= 7 * intervalValue; i++) {
+          next.setDate(current.getDate() + i);
+          if (weekdays.includes(next.getDay())) {
+            // Bei interval > 1, überspringe Wochen
+            const weeksDiff = Math.floor(i / 7);
+            if (weeksDiff % intervalValue === 0 || i <= 7) {
+              found = true;
+              break;
+            }
+          }
+        }
+        if (!found) {
+          next.setDate(current.getDate() + 7 * intervalValue);
+        }
+      } else {
+        next.setDate(next.getDate() + 7 * intervalValue);
+      }
+      break;
+
+    case "monthly":
+      next.setMonth(next.getMonth() + intervalValue);
+      if (monthDay) {
+        if (monthDay === -1) {
+          // Letzter Tag des Monats
+          next.setMonth(next.getMonth() + 1, 0);
+        } else {
+          // Bestimmter Tag, aber nicht über Monatslänge hinaus
+          const maxDay = new Date(next.getFullYear(), next.getMonth() + 1, 0).getDate();
+          next.setDate(Math.min(monthDay, maxDay));
+        }
+      }
+      break;
+
+    case "yearly":
+      next.setFullYear(next.getFullYear() + intervalValue);
+      break;
+
+    case "custom":
+      // Custom verwendet die gleiche Logik wie die anderen, basierend auf den Parametern
+      next.setDate(next.getDate() + intervalValue);
+      break;
+  }
+
+  return next.toISOString().split("T")[0];
+}
+
+// Hauptfunktion: Wird aufgerufen wenn eine wiederkehrende Aufgabe erledigt wird
+export async function completeRecurringTask(taskId: string): Promise<TaskWithRelations | null> {
+  // 1. Hole Aufgabe und Recurrence
+  const { data: task } = await supabase
+    .from("tasks")
+    .select("*")
+    .eq("id", taskId)
+    .single();
+
+  if (!task) return null;
+
+  const recurrence = await getTaskRecurrence(taskId);
+  if (!recurrence) return null;
+
+  // 2. Prüfe ob Wiederholung beendet werden soll
+  const newCompletedCount = recurrence.completed_count + 1;
+  
+  if (recurrence.end_after_count && newCompletedCount >= recurrence.end_after_count) {
+    // Wiederholung beenden
+    await deleteTaskRecurrence(taskId);
+    return null;
+  }
+
+  if (recurrence.end_date) {
+    const endDate = new Date(recurrence.end_date);
+    const today = new Date();
+    if (today >= endDate) {
+      // Wiederholung beenden
+      await deleteTaskRecurrence(taskId);
+      return null;
+    }
+  }
+
+  // 3. Berechne nächstes Fälligkeitsdatum
+  const currentDue = task.due_date || new Date().toISOString().split("T")[0];
+  const nextDueDate = calculateNextDueDate(
+    currentDue,
+    recurrence.recurrence_type,
+    recurrence.interval_value,
+    recurrence.weekdays,
+    recurrence.month_day
+  );
+
+  // 4. Erstelle neue Aufgabe
+  const { data: { user } } = await supabase.auth.getUser();
+  
+  const { data: newTask, error: createError } = await supabase
+    .from("tasks")
+    .insert({
+      title: task.title,
+      description: task.description,
+      priority: task.priority,
+      status: "todo",
+      due_date: nextDueDate,
+      section_id: task.section_id,
+      parent_task_id: task.parent_task_id,
+      created_by: user?.id || task.created_by,
+      is_recurring: true,
+    })
+    .select()
+    .single();
+
+  if (createError || !newTask) {
+    console.error("Error creating recurring task:", createError);
+    return null;
+  }
+
+  // 5. Kopiere Projekt-Verknüpfungen
+  const { data: taskProjects } = await supabase
+    .from("task_projects")
+    .select("project_id")
+    .eq("task_id", taskId);
+
+  if (taskProjects && taskProjects.length > 0) {
+    await supabase
+      .from("task_projects")
+      .insert(taskProjects.map(tp => ({
+        task_id: newTask.id,
+        project_id: tp.project_id,
+      })));
+  }
+
+  // 6. Kopiere Assignees
+  const { data: assignees } = await supabase
+    .from("task_assignees")
+    .select("user_id, assigned_by")
+    .eq("task_id", taskId);
+
+  if (assignees && assignees.length > 0) {
+    await supabase
+      .from("task_assignees")
+      .insert(assignees.map(a => ({
+        task_id: newTask.id,
+        user_id: a.user_id,
+        assigned_by: a.assigned_by,
+      })));
+  }
+
+  // 7. Kopiere Labels
+  const { data: labels } = await supabase
+    .from("task_labels")
+    .select("label_id")
+    .eq("task_id", taskId);
+
+  if (labels && labels.length > 0) {
+    await supabase
+      .from("task_labels")
+      .insert(labels.map(l => ({
+        task_id: newTask.id,
+        label_id: l.label_id,
+      })));
+  }
+
+  // 8. Verschiebe Recurrence zur neuen Aufgabe
+  await supabase
+    .from("task_recurrence")
+    .update({
+      task_id: newTask.id,
+      completed_count: newCompletedCount,
+      next_due_date: nextDueDate,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("task_id", taskId);
+
+  // 9. Entferne recurring flag von alter Aufgabe
+  await supabase
+    .from("tasks")
+    .update({ is_recurring: false })
+    .eq("id", taskId);
+
+  return newTask as TaskWithRelations;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

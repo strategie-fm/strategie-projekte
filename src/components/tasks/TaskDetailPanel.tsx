@@ -1,12 +1,13 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { X, Calendar, Flag, Folder, Trash2, AlertCircle, Layers, PlayCircle } from "lucide-react";
-import { updateTask, deleteTask, getProjects, getSections, moveTaskToSection } from "@/lib/database";
-import type { Section } from "@/types/database";
+import { X, Calendar, Flag, Folder, Trash2, AlertCircle, Layers, PlayCircle, RotateCcw } from "lucide-react";
+import { updateTask, deleteTask, getProjects, getSections, moveTaskToSection, completeRecurringTask, getTaskRecurrence } from "@/lib/database";
+import type { Section, TaskRecurrence } from "@/types/database";
 import { SubtaskList } from "./SubtaskList";
 import { LabelSelector } from "./LabelSelector";
 import { CommentList } from "./CommentList";
+import { RecurrenceSelector } from "./RecurrenceSelector";
 import type { TaskWithRelations, Project } from "@/types/database";
 import { cn } from "@/lib/utils";
 import { AssigneeSelector } from "./AssigneeSelector";
@@ -17,6 +18,7 @@ interface TaskDetailPanelProps {
   onClose: () => void;
   onUpdate: (task: TaskWithRelations) => void;
   onDelete: (taskId: string) => void;
+  onNewRecurringTask?: (task: TaskWithRelations) => void;
 }
 
 const priorities = [
@@ -32,6 +34,7 @@ export function TaskDetailPanel({
   onClose,
   onUpdate,
   onDelete,
+  onNewRecurringTask,
 }: TaskDetailPanelProps) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -42,6 +45,7 @@ export function TaskDetailPanel({
   const [isDeleting, setIsDeleting] = useState(false);
   const [projects, setProjects] = useState<Project[]>([]);
   const [sections, setSections] = useState<Section[]>([]);
+  const [recurrence, setRecurrence] = useState<TaskRecurrence | null>(null);
 
   useEffect(() => {
     if (task) {
@@ -50,6 +54,13 @@ export function TaskDetailPanel({
       setPriority(task.priority);
       setDueDate(task.due_date?.split("T")[0] || "");
       setShowDeleteConfirm(false);
+      
+      // Load recurrence data
+      if (task.is_recurring) {
+        getTaskRecurrence(task.id).then(setRecurrence);
+      } else {
+        setRecurrence(null);
+      }
     }
   }, [task]);
 
@@ -58,11 +69,11 @@ export function TaskDetailPanel({
     
     // Load sections if task has a project
     if (task?.projects?.[0]?.id) {
-        getSections(task.projects[0].id).then(setSections);
+      getSections(task.projects[0].id).then(setSections);
     } else {
-        setSections([]);
+      setSections([]);
     }
-    }, [task]);
+  }, [task]);
 
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
@@ -91,6 +102,41 @@ export function TaskDetailPanel({
     setIsSaving(false);
   };
 
+  const handleStatusChange = async (newStatus: "todo" | "in_progress" | "done") => {
+    if (!task) return;
+
+    // Wenn Aufgabe als erledigt markiert wird und wiederkehrend ist
+    if (newStatus === "done" && task.is_recurring) {
+      // Erst die aktuelle Aufgabe als erledigt markieren
+      const updated = await updateTask(task.id, { 
+        status: newStatus,
+        completed_at: new Date().toISOString()
+      });
+      
+      if (updated) {
+        onUpdate({ ...task, ...updated });
+        
+        // Dann neue wiederkehrende Aufgabe erstellen
+        const newTask = await completeRecurringTask(task.id);
+        if (newTask && onNewRecurringTask) {
+          onNewRecurringTask(newTask);
+        }
+        
+        window.dispatchEvent(new Event("taskUpdated"));
+      }
+    } else {
+      // Normale Status-Änderung
+      const updated = await updateTask(task.id, { 
+        status: newStatus,
+        completed_at: newStatus === "done" ? new Date().toISOString() : null
+      });
+      if (updated) {
+        onUpdate({ ...task, ...updated });
+        window.dispatchEvent(new Event("taskUpdated"));
+      }
+    }
+  };
+
   const handleDelete = async () => {
     if (!task || isDeleting) return;
 
@@ -102,6 +148,13 @@ export function TaskDetailPanel({
       onClose();
     }
     setIsDeleting(false);
+  };
+
+  const handleRecurrenceChange = (newRecurrence: TaskRecurrence | null) => {
+    setRecurrence(newRecurrence);
+    if (task) {
+      onUpdate({ ...task, is_recurring: !!newRecurrence });
+    }
   };
 
   // Auto-save on blur
@@ -148,6 +201,12 @@ export function TaskDetailPanel({
                 {currentProject.name}
               </span>
             )}
+            {task.is_recurring && (
+              <span className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium bg-primary-surface text-primary">
+                <RotateCcw className="w-3 h-3" />
+                Wiederkehrend
+              </span>
+            )}
           </div>
           <button
             onClick={onClose}
@@ -190,35 +249,31 @@ export function TaskDetailPanel({
                 />
               </div>
 
+              {/* Recurrence Selector */}
+              <RecurrenceSelector
+                taskId={task.id}
+                dueDate={dueDate || null}
+                onRecurrenceChange={handleRecurrenceChange}
+              />
+
               {/* Assignees */}
-                <div className="mb-4 pb-4 border-b border-border">
+              <div className="mb-4 pb-4 border-b border-border">
                 <AssigneeSelector taskId={task.id} />
-                </div>
+              </div>
 
               {/* Status */}
-                <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2">
                 <PlayCircle className="w-4 h-4 text-text-muted" />
                 <select
-                    value={task?.status || "todo"}
-                    onChange={async (e) => {
-                    if (!task) return;
-                    const newStatus = e.target.value as "todo" | "in_progress" | "done";
-                    const updated = await updateTask(task.id, { 
-                        status: newStatus,
-                        completed_at: newStatus === "done" ? new Date().toISOString() : null
-                    });
-                    if (updated) {
-                        onUpdate({ ...task, ...updated });
-                        window.dispatchEvent(new Event("taskUpdated"));
-                    }
-                    }}
-                    className="text-sm bg-transparent border border-border rounded-lg px-2 py-1 outline-none focus:border-primary"
+                  value={task?.status || "todo"}
+                  onChange={(e) => handleStatusChange(e.target.value as "todo" | "in_progress" | "done")}
+                  className="text-sm bg-transparent border border-border rounded-lg px-2 py-1 outline-none focus:border-primary"
                 >
-                    <option value="todo">Offen</option>
-                    <option value="in_progress">In Arbeit</option>
-                    <option value="done">Erledigt</option>
+                  <option value="todo">Offen</option>
+                  <option value="in_progress">In Arbeit</option>
+                  <option value="done">Erledigt</option>
                 </select>
-                </div>
+              </div>
 
               {/* Priority */}
               <div className="flex items-center gap-1">
@@ -247,32 +302,32 @@ export function TaskDetailPanel({
               </div>
 
               {/* Section */}
-                {sections.length > 0 && (
+              {sections.length > 0 && (
                 <div className="flex items-center gap-2">
-                    <Layers className="w-4 h-4 text-text-muted" />
-                    <select
+                  <Layers className="w-4 h-4 text-text-muted" />
+                  <select
                     value={task?.section_id || ""}
                     onChange={(e) => {
-                        const sectionId = e.target.value || null;
-                        if (task) {
+                      const sectionId = e.target.value || null;
+                      if (task) {
                         moveTaskToSection(task.id, sectionId).then((success) => {
-                            if (success) {
+                          if (success) {
                             onUpdate({ ...task, section_id: sectionId });
-                            }
+                          }
                         });
-                        }
+                      }
                     }}
                     className="text-sm bg-transparent border border-border rounded-lg px-2 py-1 outline-none focus:border-primary"
-                    >
+                  >
                     <option value="">Kein Abschnitt</option>
                     {sections.map((section) => (
-                        <option key={section.id} value={section.id}>
+                      <option key={section.id} value={section.id}>
                         {section.name}
-                        </option>
+                      </option>
                     ))}
-                    </select>
+                  </select>
                 </div>
-                )}
+              )}
             </div>
 
             {/* Description */}
@@ -319,6 +374,11 @@ export function TaskDetailPanel({
               <AlertCircle className="w-5 h-5 text-error flex-shrink-0" />
               <div className="flex-1">
                 <p className="text-sm font-medium text-error">Aufgabe löschen?</p>
+                {task.is_recurring && (
+                  <p className="text-xs text-error/80 mt-0.5">
+                    Die Wiederholung wird ebenfalls gelöscht.
+                  </p>
+                )}
               </div>
               <button
                 onClick={handleDelete}
