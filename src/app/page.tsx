@@ -4,16 +4,19 @@ import { useEffect, useState } from "react";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Header } from "@/components/layout/Header";
 import { SortableTaskList } from "@/components/tasks/SortableTaskList";
+import { SortableTaskItem } from "@/components/tasks/SortableTaskItem";
 import { QuickAddTask } from "@/components/tasks/QuickAddTask";
 import { TaskDetailPanel } from "@/components/tasks/TaskDetailPanel";
 import { getTasks, getLabels } from "@/lib/database";
 import type { TaskWithRelations, Label } from "@/types/database";
-import { Calendar } from "lucide-react";
+import { Calendar, Check } from "lucide-react";
 import { TaskFilters, TaskFilterState, filterTasks } from "@/components/filters/TaskFilters";
+import { cn } from "@/lib/utils";
 
 export default function Home() {
   const [overdueTasks, setOverdueTasks] = useState<TaskWithRelations[]>([]);
   const [todayTasks, setTodayTasks] = useState<TaskWithRelations[]>([]);
+  const [completedTasks, setCompletedTasks] = useState<TaskWithRelations[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedTask, setSelectedTask] = useState<TaskWithRelations | null>(null);
   const [labels, setLabels] = useState<Label[]>([]);
@@ -22,6 +25,7 @@ export default function Home() {
     labels: [],
     status: [],
   });
+  const [showCompleted, setShowCompleted] = useState(false);
 
   const loadTasks = async () => {
     setLoading(true);
@@ -40,9 +44,13 @@ export default function Home() {
     const overdue: TaskWithRelations[] = [];
     const todayList: TaskWithRelations[] = [];
     const noDueDate: TaskWithRelations[] = [];
+    const completed: TaskWithRelations[] = [];
 
     allTasks.forEach((task) => {
-      if (task.status === "done") return;
+      if (task.status === "done") {
+        completed.push(task);
+        return;
+      }
 
       if (!task.due_date) {
         noDueDate.push(task);
@@ -61,6 +69,7 @@ export default function Home() {
 
     setOverdueTasks(overdue);
     setTodayTasks([...todayList, ...noDueDate]);
+    setCompletedTasks(completed);
     setLabels(labelsData);
     setLoading(false);
   };
@@ -71,9 +80,14 @@ export default function Home() {
 
   const handleTaskUpdate = (updatedTask: TaskWithRelations) => {
     if (updatedTask.status === "done") {
+      // Move to completed
       setOverdueTasks((prev) => prev.filter((t) => t.id !== updatedTask.id));
       setTodayTasks((prev) => prev.filter((t) => t.id !== updatedTask.id));
+      setCompletedTasks((prev) => [updatedTask, ...prev.filter((t) => t.id !== updatedTask.id)]);
     } else {
+      // Remove from completed if was there
+      setCompletedTasks((prev) => prev.filter((t) => t.id !== updatedTask.id));
+      // Update in active lists
       setOverdueTasks((prev) =>
         prev.map((t) => (t.id === updatedTask.id ? updatedTask : t))
       );
@@ -89,6 +103,7 @@ export default function Home() {
   const handleTaskDelete = (taskId: string) => {
     setOverdueTasks((prev) => prev.filter((t) => t.id !== taskId));
     setTodayTasks((prev) => prev.filter((t) => t.id !== taskId));
+    setCompletedTasks((prev) => prev.filter((t) => t.id !== taskId));
     setSelectedTask(null);
   };
 
@@ -106,6 +121,7 @@ export default function Home() {
   // Apply filters
   const filteredOverdue = filterTasks(overdueTasks, filters);
   const filteredToday = filterTasks(todayTasks, filters);
+  const filteredCompleted = filterTasks(completedTasks, filters);
 
   return (
     <div className="min-h-screen bg-background">
@@ -122,12 +138,26 @@ export default function Home() {
           ) : (
             <>
               {/* Filters */}
-              <div className="flex justify-end mb-4">
+              <div className="flex justify-end gap-2 mb-4">
                 <TaskFilters
                   filters={filters}
                   onFiltersChange={setFilters}
                   availableLabels={labels}
                 />
+                {completedTasks.length > 0 && (
+                  <button
+                    onClick={() => setShowCompleted(!showCompleted)}
+                    className={cn(
+                      "flex items-center gap-2 px-3 py-1.5 text-sm rounded-lg transition-colors",
+                      showCompleted
+                        ? "bg-primary-surface text-primary"
+                        : "text-text-muted hover:text-text-primary hover:bg-divider"
+                    )}
+                  >
+                    <Check className="w-4 h-4" />
+                    Erledigte ({completedTasks.length})
+                  </button>
+                )}
               </div>
 
               {/* Überfällig Section */}
@@ -175,6 +205,26 @@ export default function Home() {
                   </div>
                 )}
               </section>
+
+              {/* Erledigte Section */}
+              {showCompleted && filteredCompleted.length > 0 && (
+                <section className="mb-6">
+                  <h2 className="text-sm font-semibold text-text-muted mb-3 flex items-center gap-2">
+                    <Check className="w-4 h-4" />
+                    Erledigt ({filteredCompleted.length})
+                  </h2>
+                  <div className="bg-surface rounded-xl shadow-sm border border-border opacity-60">
+                    {filteredCompleted.map((task) => (
+                      <SortableTaskItem
+                        key={task.id}
+                        task={task}
+                        onUpdate={handleTaskUpdate}
+                        onClick={setSelectedTask}
+                      />
+                    ))}
+                  </div>
+                </section>
+              )}
 
               {/* Quick Add */}
               <QuickAddTask onTaskCreated={handleTaskCreated} />

@@ -3,8 +3,8 @@
 import { useState } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { Check, GripVertical, RotateCcw, ListTodo, MessageSquare } from "lucide-react";
-import { toggleTaskComplete } from "@/lib/database";
+import { Check, GripVertical, RotateCcw, ListTodo, Play, MessageSquare } from "lucide-react";
+import { updateTask } from "@/lib/database";
 import type { TaskWithRelations } from "@/types/database";
 import { cn } from "@/lib/utils";
 
@@ -41,11 +41,24 @@ export function SortableTaskItem({
 
   const handleToggleComplete = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    const newStatus = task.status === "done" ? "todo" : "done";
-    const updated = await toggleTaskComplete(task.id, newStatus === "done");
+    
+    // Cycle through: todo -> in_progress -> done -> todo
+    let newStatus: "todo" | "in_progress" | "done";
+    if (task.status === "todo") {
+      newStatus = "in_progress";
+    } else if (task.status === "in_progress") {
+      newStatus = "done";
+    } else {
+      newStatus = "todo";
+    }
+    
+    const updated = await updateTask(task.id, { 
+      status: newStatus,
+      completed_at: newStatus === "done" ? new Date().toISOString() : null
+    });
+    
     if (updated && onUpdate) {
       onUpdate({ ...task, ...updated });
-      // Notify sidebar to update progress
       window.dispatchEvent(new Event("taskUpdated"));
     }
   };
@@ -130,18 +143,33 @@ export function SortableTaskItem({
         <GripVertical className="w-4 h-4" />
       </button>
 
-      {/* Checkbox */}
+      {/* Status Toggle */}
       <button
         onClick={handleToggleComplete}
-        disabled={isUpdating}
         className={cn(
-          "w-5 h-5 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-colors mt-0.5",
-          priorityColors[task.priority],
-          isCompleted && "bg-primary border-primary",
-          isUpdating && "opacity-50"
+          "w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors",
+          task.status === "done"
+            ? "bg-success border-success text-white"
+            : task.status === "in_progress"
+            ? "bg-primary border-primary text-white"
+            : "border-border hover:border-primary"
         )}
+        title={
+          task.status === "todo" 
+            ? "Als 'In Arbeit' markieren" 
+            : task.status === "in_progress" 
+            ? "Als 'Erledigt' markieren" 
+            : "Als 'Offen' markieren"
+        }
       >
-        {isCompleted && <Check className="w-3 h-3 text-white" />}
+        {task.status === "done" && (
+          <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+          </svg>
+        )}
+        {task.status === "in_progress" && (
+          <Play className="w-2.5 h-2.5 fill-current" />
+        )}
       </button>
 
       {/* Content */}

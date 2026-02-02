@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { X, Calendar, Flag, Folder, Trash2, AlertCircle, Layers } from "lucide-react";
+import { X, Calendar, Flag, Folder, Trash2, AlertCircle, Layers, PlayCircle } from "lucide-react";
 import { updateTask, deleteTask, getProjects, getSections, moveTaskToSection } from "@/lib/database";
 import type { Section } from "@/types/database";
 import { SubtaskList } from "./SubtaskList";
@@ -188,6 +188,31 @@ export function TaskDetailPanel({
                   className="text-sm bg-transparent border border-border rounded-lg px-2 py-1 outline-none focus:border-primary"
                 />
               </div>
+
+              {/* Status */}
+                <div className="flex items-center gap-2">
+                <PlayCircle className="w-4 h-4 text-text-muted" />
+                <select
+                    value={task?.status || "todo"}
+                    onChange={async (e) => {
+                    if (!task) return;
+                    const newStatus = e.target.value as "todo" | "in_progress" | "done";
+                    const updated = await updateTask(task.id, { 
+                        status: newStatus,
+                        completed_at: newStatus === "done" ? new Date().toISOString() : null
+                    });
+                    if (updated) {
+                        onUpdate({ ...task, ...updated });
+                        window.dispatchEvent(new Event("taskUpdated"));
+                    }
+                    }}
+                    className="text-sm bg-transparent border border-border rounded-lg px-2 py-1 outline-none focus:border-primary"
+                >
+                    <option value="todo">Offen</option>
+                    <option value="in_progress">In Arbeit</option>
+                    <option value="done">Erledigt</option>
+                </select>
+                </div>
 
               {/* Priority */}
               <div className="flex items-center gap-1">
