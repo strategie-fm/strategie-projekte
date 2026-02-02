@@ -9,6 +9,7 @@ import { LabelSelector } from "./LabelSelector";
 import { CommentList } from "./CommentList";
 import type { TaskWithRelations, Project } from "@/types/database";
 import { cn } from "@/lib/utils";
+import { AssigneeSelector } from "./AssigneeSelector";
 
 interface TaskDetailPanelProps {
   task: TaskWithRelations | null;
@@ -188,6 +189,11 @@ export function TaskDetailPanel({
                   className="text-sm bg-transparent border border-border rounded-lg px-2 py-1 outline-none focus:border-primary"
                 />
               </div>
+
+              {/* Assignees */}
+                <div className="mb-4 pb-4 border-b border-border">
+                <AssigneeSelector taskId={task.id} />
+                </div>
 
               {/* Status */}
                 <div className="flex items-center gap-2">

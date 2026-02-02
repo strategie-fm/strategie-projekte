@@ -1,5 +1,5 @@
 import { supabase } from "./supabase";
-import type { Project, Task, TaskWithRelations, Label, Comment, Section } from "@/types/database";
+import type { Project, Task, TaskWithRelations, Label, Comment, Section, Profile, TaskAssignee } from "@/types/database";
 
 // ============================================
 // PROJECTS
@@ -892,4 +892,97 @@ export async function getAllProjectsProgress(): Promise<Record<string, { total: 
   });
 
   return progress;
+}
+
+// ============================================
+// PROFILES
+// ============================================
+
+export async function getProfiles(): Promise<Profile[]> {
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("*")
+    .order("full_name");
+
+  if (error) {
+    console.error("Error fetching profiles:", error);
+    return [];
+  }
+
+  return data || [];
+}
+
+export async function getProfile(userId: string): Promise<Profile | null> {
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("*")
+    .eq("id", userId)
+    .single();
+
+  if (error) {
+    console.error("Error fetching profile:", error);
+    return null;
+  }
+
+  return data;
+}
+
+// ============================================
+// TASK ASSIGNEES
+// ============================================
+
+export async function getTaskAssignees(taskId: string): Promise<TaskAssignee[]> {
+  const { data, error } = await supabase
+    .from("task_assignees")
+    .select(`
+      *,
+      profile:profiles!task_assignees_user_id_fkey(*)
+    `)
+    .eq("task_id", taskId);
+
+  if (error) {
+    console.error("Error fetching task assignees:", error);
+    return [];
+  }
+
+  return data || [];
+}
+
+export async function assignTask(taskId: string, userId: string): Promise<TaskAssignee | null> {
+  const { data: { user } } = await supabase.auth.getUser();
+  
+  const { data, error } = await supabase
+    .from("task_assignees")
+    .insert({
+      task_id: taskId,
+      user_id: userId,
+      assigned_by: user?.id,
+    })
+    .select(`
+      *,
+      profile:profiles!task_assignees_user_id_fkey(*)
+    `)
+    .single();
+
+  if (error) {
+    console.error("Error assigning task:", error);
+    return null;
+  }
+
+  return data;
+}
+
+export async function unassignTask(taskId: string, userId: string): Promise<boolean> {
+  const { error } = await supabase
+    .from("task_assignees")
+    .delete()
+    .eq("task_id", taskId)
+    .eq("user_id", userId);
+
+  if (error) {
+    console.error("Error unassigning task:", error);
+    return false;
+  }
+
+  return true;
 }

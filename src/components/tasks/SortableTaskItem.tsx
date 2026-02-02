@@ -1,11 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { Check, GripVertical, RotateCcw, ListTodo, Play, MessageSquare } from "lucide-react";
-import { updateTask } from "@/lib/database";
-import type { TaskWithRelations } from "@/types/database";
+import { GripVertical, RotateCcw, ListTodo, Play } from "lucide-react";
+import { updateTask, getTaskAssignees } from "@/lib/database";
+import type { TaskWithRelations, TaskAssignee } from "@/types/database";
 import { cn } from "@/lib/utils";
 
 interface SortableTaskItemProps {
@@ -24,7 +24,24 @@ export function SortableTaskItem({
   isDragging,
 }: SortableTaskItemProps) {
   const [isUpdating, setIsUpdating] = useState(false);
+  const [assignees, setAssignees] = useState<TaskAssignee[]>([]);
   const isCompleted = task.status === "done";
+
+  useEffect(() => {
+    getTaskAssignees(task.id).then(setAssignees);
+    
+    const handleAssigneesChanged = (e: Event) => {
+      const customEvent = e as CustomEvent<string>;
+      if (customEvent.detail === task.id) {
+        getTaskAssignees(task.id).then(setAssignees);
+      }
+    };
+
+    window.addEventListener("assigneesChanged", handleAssigneesChanged);
+    return () => {
+      window.removeEventListener("assigneesChanged", handleAssigneesChanged);
+    };
+  }, [task.id]);
 
   const {
     attributes,
@@ -69,13 +86,6 @@ export function SortableTaskItem({
     }
   };
 
-  const priorityColors = {
-    p1: "border-error text-error",
-    p2: "border-warning text-warning",
-    p3: "border-info text-info",
-    p4: "border-border text-text-muted",
-  };
-
   const priorityBadgeColors = {
     p1: "bg-error-light text-error",
     p2: "bg-warning-light text-warning",
@@ -117,6 +127,18 @@ export function SortableTaskItem({
         isOverdue: false,
       };
     }
+  };
+
+  const getInitials = (name: string | null, email: string) => {
+    if (name) {
+      return name
+        .split(" ")
+        .map((n) => n[0])
+        .join("")
+        .toUpperCase()
+        .slice(0, 2);
+    }
+    return email.slice(0, 2).toUpperCase();
   };
 
   const dueInfo = formatDueDate(task.due_date);
@@ -243,6 +265,39 @@ export function SortableTaskItem({
             </span>
           )}
 
+          {/* Assignees */}
+          {assignees.length > 0 && (
+            <div className="flex -space-x-1">
+              {assignees.slice(0, 3).map((assignee) => (
+                assignee.profile?.avatar_url ? (
+                  <img
+                    key={assignee.user_id}
+                    src={assignee.profile.avatar_url}
+                    alt={assignee.profile.full_name || assignee.profile.email}
+                    className="w-5 h-5 rounded-full border border-surface"
+                    title={assignee.profile.full_name || assignee.profile.email}
+                  />
+                ) : (
+                  <div
+                    key={assignee.user_id}
+                    className="w-5 h-5 rounded-full bg-primary text-white text-[10px] font-medium flex items-center justify-center border border-surface"
+                    title={assignee.profile?.full_name || assignee.profile?.email}
+                  >
+                    {getInitials(
+                      assignee.profile?.full_name || null,
+                      assignee.profile?.email || ""
+                    )}
+                  </div>
+                )
+              ))}
+              {assignees.length > 3 && (
+                <div className="w-5 h-5 rounded-full bg-divider text-text-muted text-[10px] font-medium flex items-center justify-center border border-surface">
+                  +{assignees.length - 3}
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Labels */}
           {labels.slice(0, 2).map((label) => (
             <span
@@ -260,21 +315,6 @@ export function SortableTaskItem({
           )}
         </div>
       </div>
-
-      {/* Assignees */}
-      {task.assignees && task.assignees.length > 0 && (
-        <div className="flex -space-x-1 mt-0.5">
-          {task.assignees.slice(0, 3).map((assignee) => (
-            <div
-              key={assignee.id}
-              className="w-6 h-6 rounded-full bg-primary-surface text-primary text-[10px] font-medium flex items-center justify-center border-2 border-surface"
-              title={assignee.full_name || assignee.email}
-            >
-              {(assignee.full_name || assignee.email).charAt(0).toUpperCase()}
-            </div>
-          ))}
-        </div>
-      )}
     </div>
   );
 }

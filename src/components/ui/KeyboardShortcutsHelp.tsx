@@ -1,29 +1,50 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Keyboard, X } from "lucide-react";
 
 const shortcuts = [
   { category: "Navigation", items: [
-    { keys: ["1"], description: "Startseite" },
-    { keys: ["2"], description: "Inbox" },
-    { keys: ["3"], description: "Heute" },
-    { keys: ["4"], description: "Anstehend" },
-    { keys: ["g", "h"], description: "Go to Home" },
-    { keys: ["g", "i"], description: "Go to Inbox" },
-    { keys: ["g", "t"], description: "Go to Today" },
-    { keys: ["g", "u"], description: "Go to Upcoming" },
-    { keys: ["g", "s"], description: "Go to Search" },
+    { keys: ["D"], description: "Dashboard" },
+    { keys: ["H"], description: "Heute" },
+    { keys: ["I"], description: "Inbox" },
+    { keys: ["U"], description: "Anstehend" },
+    { keys: ["S"], description: "Suche" },
   ]},
   { category: "Aktionen", items: [
-    { keys: ["n"], description: "Neue Aufgabe" },
-    { keys: ["/"], description: "Suche öffnen" },
+    { keys: ["N"], description: "Neue Aufgabe" },
     { keys: ["Esc"], description: "Schließen / Abbrechen" },
+    { keys: ["?"], description: "Tastaturkürzel anzeigen" },
   ]},
 ];
 
 export function KeyboardShortcutsHelp() {
   const [isOpen, setIsOpen] = useState(false);
+
+  // Listen for ? key to open shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (
+        e.target instanceof HTMLInputElement ||
+        e.target instanceof HTMLTextAreaElement ||
+        e.target instanceof HTMLSelectElement
+      ) {
+        return;
+      }
+
+      if (e.key === "?" || (e.shiftKey && e.key === "/")) {
+        e.preventDefault();
+        setIsOpen(true);
+      }
+
+      if (e.key === "Escape" && isOpen) {
+        setIsOpen(false);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isOpen]);
 
   return (
     <>
@@ -73,14 +94,12 @@ export function KeyboardShortcutsHelp() {
                         </span>
                         <div className="flex items-center gap-1">
                           {item.keys.map((key, keyIdx) => (
-                            <span key={keyIdx}>
-                              <kbd className="px-2 py-1 text-xs font-mono bg-divider border border-border rounded text-text-primary">
-                                {key}
-                              </kbd>
-                              {keyIdx < item.keys.length - 1 && (
-                                <span className="mx-1 text-text-muted">dann</span>
-                              )}
-                            </span>
+                            <kbd 
+                              key={keyIdx}
+                              className="px-2 py-1 text-xs font-mono bg-divider border border-border rounded text-text-primary min-w-[28px] text-center"
+                            >
+                              {key}
+                            </kbd>
                           ))}
                         </div>
                       </div>
@@ -88,6 +107,11 @@ export function KeyboardShortcutsHelp() {
                   </div>
                 </div>
               ))}
+            </div>
+            <div className="px-6 py-3 border-t border-border bg-divider/30 rounded-b-xl">
+              <p className="text-xs text-text-muted text-center">
+                Drücke <kbd className="px-1.5 py-0.5 text-xs font-mono bg-surface border border-border rounded">?</kbd> um diese Hilfe zu öffnen
+              </p>
             </div>
           </div>
         </div>
