@@ -9,14 +9,16 @@ import { cn } from "@/lib/utils";
 interface TaskItemProps {
   task: TaskWithRelations;
   onUpdate?: (task: TaskWithRelations) => void;
+  onClick?: (task: TaskWithRelations) => void;
   showProject?: boolean;
 }
 
-export function TaskItem({ task, onUpdate, showProject = true }: TaskItemProps) {
+export function TaskItem({ task, onUpdate, onClick, showProject = true }: TaskItemProps) {
   const [isUpdating, setIsUpdating] = useState(false);
   const isCompleted = task.status === "done";
 
-  const handleToggleComplete = async () => {
+  const handleToggleComplete = async (e: React.MouseEvent) => {
+    e.stopPropagation();
     if (isUpdating) return;
     setIsUpdating(true);
 
@@ -25,6 +27,12 @@ export function TaskItem({ task, onUpdate, showProject = true }: TaskItemProps) 
       onUpdate({ ...task, ...updated });
     }
     setIsUpdating(false);
+  };
+
+  const handleClick = () => {
+    if (onClick) {
+      onClick(task);
+    }
   };
 
   const priorityColors = {
@@ -75,7 +83,13 @@ export function TaskItem({ task, onUpdate, showProject = true }: TaskItemProps) 
   const dueInfo = formatDueDate(task.due_date);
 
   return (
-    <div className="flex items-center gap-4 px-4 py-3 hover:bg-primary-bg/50 transition-colors border-b border-divider last:border-b-0">
+    <div 
+      className={cn(
+        "flex items-center gap-4 px-4 py-3 hover:bg-primary-bg/50 transition-colors border-b border-divider last:border-b-0",
+        onClick && "cursor-pointer"
+      )}
+      onClick={handleClick}
+    >
       {/* Checkbox */}
       <button
         onClick={handleToggleComplete}

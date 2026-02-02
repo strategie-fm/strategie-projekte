@@ -320,3 +320,46 @@ export async function deleteTask(id: string): Promise<boolean> {
 
   return true;
 }
+
+export async function searchTasks(query: string): Promise<TaskWithRelations[]> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user || !query.trim()) return [];
+
+  const { data: tasks, error } = await supabase
+    .from("tasks")
+    .select("*")
+    .eq("created_by", user.id)
+    .neq("status", "archived")
+    .or(`title.ilike.%${query}%,description.ilike.%${query}%`)
+    .order("created_at", { ascending: false })
+    .limit(50);
+
+  if (error) {
+    console.error("Error searching tasks:", error);
+    return [];
+  }
+
+  if (!tasks || tasks.length === 0) {
+    return [];
+  }
+
+  // Load project links
+  const taskIds = tasks.map(t => t.id);
+  
+  const { data: taskProjects } = await supabase
+    .from("task_projects")
+    .select("task_id, project_id, projects(*)")
+    .in("task_id", taskIds);
+
+  return tasks.map((task) => {
+    const projectLinks = taskProjects?.filter(tp => tp.task_id === task.id) || [];
+    const projects = projectLinks.map(tp => tp.projects).filter(Boolean);
+    
+    return {
+      ...task,
+      projects: projects as Project[],
+      assignees: [],
+      labels: [],
+    };
+  });
+}

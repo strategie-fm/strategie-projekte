@@ -19,6 +19,7 @@ import { supabase } from "@/lib/supabase";
 import { getProjects, createProject } from "@/lib/database";
 import type { User } from "@supabase/supabase-js";
 import type { Project } from "@/types/database";
+import { QuickAddTaskModal } from "@/components/tasks/QuickAddTaskModal";
 
 const navigation = [
   { name: "Inbox", href: "/inbox", icon: Inbox },
@@ -35,6 +36,7 @@ export function Sidebar() {
   const [showNewProject, setShowNewProject] = useState(false);
   const [newProjectName, setNewProjectName] = useState("");
   const [isCreating, setIsCreating] = useState(false);
+  const [showQuickAdd, setShowQuickAdd] = useState(false);
 
   useEffect(() => {
     // Get initial user
@@ -108,7 +110,10 @@ export function Sidebar() {
 
       {/* Quick Add Button */}
       <div className="p-3">
-        <button className="w-full flex items-center gap-2 px-3 py-2 rounded-lg bg-white/10 text-white hover:bg-white/20 transition-colors">
+        <button 
+          onClick={() => setShowQuickAdd(true)}
+          className="w-full flex items-center gap-2 px-3 py-2 rounded-lg bg-white/10 text-white hover:bg-white/20 transition-colors"
+        >
           <Plus className="w-4 h-4" />
           <span className="text-sm font-medium">Neue Aufgabe</span>
         </button>
@@ -248,6 +253,26 @@ export function Sidebar() {
           </button>
         </div>
       </div>
+
+      {/* Quick Add Modal */}
+      {showQuickAdd && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div 
+            className="absolute inset-0 bg-black/50"
+            onClick={() => setShowQuickAdd(false)}
+          />
+          <div className="relative w-full max-w-lg bg-surface rounded-xl shadow-xl p-4">
+            <QuickAddTaskModal 
+              onClose={() => setShowQuickAdd(false)}
+              onTaskCreated={() => {
+                setShowQuickAdd(false);
+                // Optional: Seite neu laden
+                window.location.reload();
+              }}
+            />
+          </div>
+        </div>
+      )}
     </aside>
   );
 }

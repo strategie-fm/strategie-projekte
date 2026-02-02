@@ -5,6 +5,7 @@ import { Sidebar } from "@/components/layout/Sidebar";
 import { Header } from "@/components/layout/Header";
 import { TaskItem } from "@/components/tasks/TaskItem";
 import { QuickAddTask } from "@/components/tasks/QuickAddTask";
+import { TaskDetailModal } from "@/components/tasks/TaskDetailModal";
 import { getTasks } from "@/lib/database";
 import type { TaskWithRelations } from "@/types/database";
 
@@ -12,11 +13,11 @@ export default function Home() {
   const [overdueTasks, setOverdueTasks] = useState<TaskWithRelations[]>([]);
   const [todayTasks, setTodayTasks] = useState<TaskWithRelations[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedTask, setSelectedTask] = useState<TaskWithRelations | null>(null);
 
   const loadTasks = async () => {
     setLoading(true);
     
-    // Get all tasks and filter client-side for simplicity
     const allTasks = await getTasks();
     
     const today = new Date();
@@ -57,11 +58,22 @@ export default function Home() {
   }, []);
 
   const handleTaskUpdate = (updatedTask: TaskWithRelations) => {
-    // Remove from lists if completed
     if (updatedTask.status === "done") {
       setOverdueTasks((prev) => prev.filter((t) => t.id !== updatedTask.id));
       setTodayTasks((prev) => prev.filter((t) => t.id !== updatedTask.id));
+    } else {
+      setOverdueTasks((prev) =>
+        prev.map((t) => (t.id === updatedTask.id ? updatedTask : t))
+      );
+      setTodayTasks((prev) =>
+        prev.map((t) => (t.id === updatedTask.id ? updatedTask : t))
+      );
     }
+  };
+
+  const handleTaskDelete = (taskId: string) => {
+    setOverdueTasks((prev) => prev.filter((t) => t.id !== taskId));
+    setTodayTasks((prev) => prev.filter((t) => t.id !== taskId));
   };
 
   const handleTaskCreated = () => {
@@ -102,6 +114,7 @@ export default function Home() {
                         key={task.id}
                         task={task}
                         onUpdate={handleTaskUpdate}
+                        onClick={setSelectedTask}
                       />
                     ))}
                   </div>
@@ -121,6 +134,7 @@ export default function Home() {
                         key={task.id}
                         task={task}
                         onUpdate={handleTaskUpdate}
+                        onClick={setSelectedTask}
                       />
                     ))}
                   </div>
@@ -139,6 +153,15 @@ export default function Home() {
           )}
         </div>
       </main>
+
+      {/* Task Detail Modal */}
+      <TaskDetailModal
+        task={selectedTask}
+        isOpen={!!selectedTask}
+        onClose={() => setSelectedTask(null)}
+        onUpdate={handleTaskUpdate}
+        onDelete={handleTaskDelete}
+      />
     </div>
   );
 }
