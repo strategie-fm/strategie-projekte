@@ -16,6 +16,7 @@ import { cn } from "@/lib/utils";
 import { TaskFilters, TaskFilterState, filterTasks } from "@/components/filters/TaskFilters";
 import { getLabels } from "@/lib/database";
 import type { Label } from "@/types/database";
+import { DonutChart, DonutLegend } from "@/components/charts/DonutChart";
 
 export default function ProjectPage() {
   const params = useParams();
@@ -130,47 +131,100 @@ export default function ProjectPage() {
         />
 
         <div className="p-6">
-          {/* Project Header with Settings */}
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-sm font-semibold text-text-secondary flex items-center gap-2">
-              <span
-                className="w-3 h-3 rounded"
-                style={{ backgroundColor: project.color }}
-              />
-              Aufgaben ({activeTasks.length}
-              {filters.priorities.length > 0 || filters.labels.length > 0 || filters.status.length > 0
-                ? ` von ${totalActiveTasks}`
-                : ""
-              })
-            </h2>
-            <div className="flex items-center gap-2">
-              <TaskFilters
-                filters={filters}
-                onFiltersChange={setFilters}
-                availableLabels={labels}
-              />
-              {completedTasks.length > 0 && (
+          {/* Project Header with Progress */}
+          <div className="mb-6">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-sm font-semibold text-text-secondary flex items-center gap-2">
+                <span
+                  className="w-3 h-3 rounded"
+                  style={{ backgroundColor: project.color }}
+                />
+                Aufgaben ({activeTasks.length}
+                {filters.priorities.length > 0 || filters.labels.length > 0 || filters.status.length > 0
+                  ? ` von ${totalActiveTasks}`
+                  : ""
+                })
+              </h2>
+              <div className="flex items-center gap-2">
+                <TaskFilters
+                  filters={filters}
+                  onFiltersChange={setFilters}
+                  availableLabels={labels}
+                />
+                {completedTasks.length > 0 && (
+                  <button
+                    onClick={() => setShowCompleted(!showCompleted)}
+                    className={cn(
+                      "flex items-center gap-2 px-3 py-1.5 text-sm rounded-lg transition-colors",
+                      showCompleted
+                        ? "bg-primary-surface text-primary"
+                        : "text-text-muted hover:text-text-primary hover:bg-divider"
+                    )}
+                  >
+                    <Check className="w-4 h-4" />
+                    Erledigte ({completedTasks.length})
+                  </button>
+                )}
                 <button
-                  onClick={() => setShowCompleted(!showCompleted)}
-                  className={cn(
-                    "flex items-center gap-2 px-3 py-1.5 text-sm rounded-lg transition-colors",
-                    showCompleted
-                      ? "bg-primary-surface text-primary"
-                      : "text-text-muted hover:text-text-primary hover:bg-divider"
-                  )}
+                  onClick={() => setShowSettings(true)}
+                  className="flex items-center gap-2 px-3 py-1.5 text-sm text-text-muted hover:text-text-primary hover:bg-divider rounded-lg transition-colors"
+                  title="Einstellungen"
                 >
-                  <Check className="w-4 h-4" />
-                  Erledigte ({completedTasks.length})
+                  <Settings className="w-4 h-4" />
                 </button>
-              )}
-              <button
-                onClick={() => setShowSettings(true)}
-                className="flex items-center gap-2 px-3 py-1.5 text-sm text-text-muted hover:text-text-primary hover:bg-divider rounded-lg transition-colors"
-                title="Einstellungen"
-              >
-                <Settings className="w-4 h-4" />
-              </button>
+              </div>
             </div>
+            
+            {/* Donut Charts */}
+            {tasks.length > 0 && (
+              <div className="bg-surface rounded-xl border border-border p-6 mt-4">
+                <div className="flex items-start justify-around gap-8">
+                  {/* Status Donut */}
+                  <div className="flex flex-col items-center gap-4">
+                    <DonutChart
+                      size={120}
+                      strokeWidth={14}
+                      title="Status"
+                      segments={[
+                        { value: tasks.filter(t => t.status === "todo").length, color: "#e0e0e0", label: "Offen" },
+                        { value: tasks.filter(t => t.status === "in_progress").length, color: "#183c6c", label: "In Arbeit" },
+                        { value: tasks.filter(t => t.status === "done").length, color: "#059669", label: "Erledigt" },
+                      ]}
+                    />
+                    <DonutLegend
+                      segments={[
+                        { value: tasks.filter(t => t.status === "todo").length, color: "#e0e0e0", label: "Offen" },
+                        { value: tasks.filter(t => t.status === "in_progress").length, color: "#183c6c", label: "In Arbeit" },
+                        { value: tasks.filter(t => t.status === "done").length, color: "#059669", label: "Erledigt" },
+                      ]}
+                    />
+                  </div>
+
+                  {/* Priority Donut */}
+                  <div className="flex flex-col items-center gap-4">
+                    <DonutChart
+                      size={120}
+                      strokeWidth={14}
+                      title="Priorität"
+                      segments={[
+                        { value: tasks.filter(t => t.priority === "p1").length, color: "#dc2626", label: "P1" },
+                        { value: tasks.filter(t => t.priority === "p2").length, color: "#f59e0b", label: "P2" },
+                        { value: tasks.filter(t => t.priority === "p3").length, color: "#3b82f6", label: "P3" },
+                        { value: tasks.filter(t => t.priority === "p4").length, color: "#e0e0e0", label: "P4" },
+                      ]}
+                    />
+                    <DonutLegend
+                      segments={[
+                        { value: tasks.filter(t => t.priority === "p1").length, color: "#dc2626", label: "P1" },
+                        { value: tasks.filter(t => t.priority === "p2").length, color: "#f59e0b", label: "P2" },
+                        { value: tasks.filter(t => t.priority === "p3").length, color: "#3b82f6", label: "P3" },
+                        { value: tasks.filter(t => t.priority === "p4").length, color: "#e0e0e0", label: "P4" },
+                      ]}
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Tasks with Sections */}
