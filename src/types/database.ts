@@ -41,6 +41,16 @@ export interface Project {
   updated_at: string;
 }
 
+export interface Section {
+  id: string;
+  name: string;
+  project_id: string;
+  position: number;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Task {
   id: string;
   title: string;
@@ -66,6 +76,7 @@ export interface TaskWithRelations extends Task {
   projects?: Project[];
   assignees?: Profile[];
   labels?: Label[];
+  section_id?: string | null;
   subtasks?: Task[];
   subtaskCount?: {
     total: number;

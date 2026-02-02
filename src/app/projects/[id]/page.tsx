@@ -4,13 +4,13 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Header } from "@/components/layout/Header";
-import { SortableTaskList } from "@/components/tasks/SortableTaskList";
 import { SortableTaskItem } from "@/components/tasks/SortableTaskItem";
 import { QuickAddTask } from "@/components/tasks/QuickAddTask";
 import { TaskDetailPanel } from "@/components/tasks/TaskDetailPanel";
 import { ProjectSettingsModal } from "@/components/projects/ProjectSettingsModal";
-import { getProject, getTasksByProject } from "@/lib/database";
-import type { Project, TaskWithRelations } from "@/types/database";
+import { SectionList } from "@/components/sections/SectionList";
+import { getProject, getTasksByProject, getSections } from "@/lib/database";
+import type { Project, TaskWithRelations, Section } from "@/types/database";
 import { FolderOpen, Settings, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -21,6 +21,7 @@ export default function ProjectPage() {
 
   const [project, setProject] = useState<Project | null>(null);
   const [tasks, setTasks] = useState<TaskWithRelations[]>([]);
+  const [sections, setSections] = useState<Section[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedTask, setSelectedTask] = useState<TaskWithRelations | null>(null);
   const [showSettings, setShowSettings] = useState(false);
@@ -29,13 +30,15 @@ export default function ProjectPage() {
   const loadData = async () => {
     setLoading(true);
 
-    const [projectData, tasksData] = await Promise.all([
+    const [projectData, tasksData, sectionsData] = await Promise.all([
       getProject(projectId),
       getTasksByProject(projectId),
+      getSections(projectId),
     ]);
 
     setProject(projectData);
     setTasks(tasksData);
+    setSections(sectionsData);
     setLoading(false);
   };
 
@@ -145,82 +148,80 @@ export default function ProjectPage() {
             </div>
           </div>
 
-          <section className="mb-6">
-            {activeTasks.length > 0 ? (
-              <>
-                {/* Active Tasks */}
-                <SortableTaskList
-                  tasks={activeTasks}
-                  onTasksReorder={(reordered) => {
-                    setTasks([...reordered, ...completedTasks]);
-                  }}
-                  onTaskUpdate={handleTaskUpdate}
-                  onTaskClick={setSelectedTask}
-                  showProject={false}
-                />
+          {/* Tasks with Sections */}
+          {activeTasks.length > 0 || sections.length > 0 ? (
+            <section className="mb-6">
+              <SectionList
+                projectId={projectId}
+                sections={sections}
+                tasks={tasks}
+                onSectionsChange={setSections}
+                onTaskUpdate={handleTaskUpdate}
+                onTaskClick={setSelectedTask}
+                onTasksReorder={setTasks}
+              />
 
-                {/* Completed Tasks */}
-                {showCompleted && completedTasks.length > 0 && (
-                  <div className="mt-4">
-                    <h3 className="text-xs font-medium text-text-muted mb-2 px-2">
-                      Erledigt
-                    </h3>
-                    <div className="bg-surface rounded-xl shadow-sm border border-border opacity-60">
-                      {completedTasks.map((task) => (
-                        <SortableTaskItem
-                          key={task.id}
-                          task={task}
-                          onUpdate={handleTaskUpdate}
-                          onClick={setSelectedTask}
-                          showProject={false}
-                        />
-                      ))}
-                    </div>
+              {/* Completed Tasks */}
+              {showCompleted && completedTasks.length > 0 && (
+                <div className="mt-6">
+                  <h3 className="text-xs font-medium text-text-muted mb-2 px-2">
+                    Erledigt
+                  </h3>
+                  <div className="bg-surface rounded-xl shadow-sm border border-border opacity-60">
+                    {completedTasks.map((task) => (
+                      <SortableTaskItem
+                        key={task.id}
+                        task={task}
+                        onUpdate={handleTaskUpdate}
+                        onClick={setSelectedTask}
+                        showProject={false}
+                      />
+                    ))}
                   </div>
-                )}
-              </>
-            ) : (
-              <>
-                {completedTasks.length > 0 ? (
-                  <>
-                    <div className="bg-surface rounded-xl shadow-sm border border-border p-8 text-center mb-4">
-                      <p className="text-text-muted">
-                        Alle Aufgaben erledigt! 🎉
-                      </p>
-                    </div>
-                    {showCompleted && (
-                      <div className="mt-4">
-                        <h3 className="text-xs font-medium text-text-muted mb-2 px-2">
-                          Erledigt
-                        </h3>
-                        <div className="bg-surface rounded-xl shadow-sm border border-border opacity-60">
-                          {completedTasks.map((task) => (
-                            <SortableTaskItem
-                              key={task.id}
-                              task={task}
-                              onUpdate={handleTaskUpdate}
-                              onClick={setSelectedTask}
-                              showProject={false}
-                            />
-                          ))}
-                        </div>
+                </div>
+              )}
+            </section>
+          ) : (
+            <section className="mb-6">
+              {completedTasks.length > 0 ? (
+                <>
+                  <div className="bg-surface rounded-xl shadow-sm border border-border p-8 text-center mb-4">
+                    <p className="text-text-muted">
+                      Alle Aufgaben erledigt! 🎉
+                    </p>
+                  </div>
+                  {showCompleted && (
+                    <div className="mt-4">
+                      <h3 className="text-xs font-medium text-text-muted mb-2 px-2">
+                        Erledigt
+                      </h3>
+                      <div className="bg-surface rounded-xl shadow-sm border border-border opacity-60">
+                        {completedTasks.map((task) => (
+                          <SortableTaskItem
+                            key={task.id}
+                            task={task}
+                            onUpdate={handleTaskUpdate}
+                            onClick={setSelectedTask}
+                            showProject={false}
+                          />
+                        ))}
                       </div>
-                    )}
-                  </>
-                ) : (
-                  <div className="bg-surface rounded-xl shadow-sm border border-border p-12 text-center">
-                    <FolderOpen className="w-12 h-12 text-text-muted mx-auto mb-4" />
-                    <p className="text-text-muted mb-2">
-                      Keine Aufgaben in dieser Aufgabenliste
-                    </p>
-                    <p className="text-sm text-text-muted">
-                      Füge deine erste Aufgabe hinzu
-                    </p>
-                  </div>
-                )}
-              </>
-            )}
-          </section>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div className="bg-surface rounded-xl shadow-sm border border-border p-12 text-center">
+                  <FolderOpen className="w-12 h-12 text-text-muted mx-auto mb-4" />
+                  <p className="text-text-muted mb-2">
+                    Keine Aufgaben in dieser Aufgabenliste
+                  </p>
+                  <p className="text-sm text-text-muted">
+                    Füge deine erste Aufgabe hinzu
+                  </p>
+                </div>
+              )}
+            </section>
+          )}
 
           <QuickAddTask projectId={projectId} onTaskCreated={handleTaskCreated} />
         </div>

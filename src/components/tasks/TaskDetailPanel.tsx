@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { X, Calendar, Flag, Folder, Trash2, AlertCircle } from "lucide-react";
-import { updateTask, deleteTask, getProjects } from "@/lib/database";
+import { X, Calendar, Flag, Folder, Trash2, AlertCircle, Layers } from "lucide-react";
+import { updateTask, deleteTask, getProjects, getSections, moveTaskToSection } from "@/lib/database";
+import type { Section } from "@/types/database";
 import { SubtaskList } from "./SubtaskList";
 import { LabelSelector } from "./LabelSelector";
 import { CommentList } from "./CommentList";
@@ -39,6 +40,7 @@ export function TaskDetailPanel({
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [projects, setProjects] = useState<Project[]>([]);
+  const [sections, setSections] = useState<Section[]>([]);
 
   useEffect(() => {
     if (task) {
@@ -52,7 +54,14 @@ export function TaskDetailPanel({
 
   useEffect(() => {
     getProjects().then(setProjects);
-  }, []);
+    
+    // Load sections if task has a project
+    if (task?.projects?.[0]?.id) {
+        getSections(task.projects[0].id).then(setSections);
+    } else {
+        setSections([]);
+    }
+    }, [task]);
 
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
@@ -205,6 +214,34 @@ export function TaskDetailPanel({
                   ))}
                 </div>
               </div>
+
+              {/* Section */}
+                {sections.length > 0 && (
+                <div className="flex items-center gap-2">
+                    <Layers className="w-4 h-4 text-text-muted" />
+                    <select
+                    value={task?.section_id || ""}
+                    onChange={(e) => {
+                        const sectionId = e.target.value || null;
+                        if (task) {
+                        moveTaskToSection(task.id, sectionId).then((success) => {
+                            if (success) {
+                            onUpdate({ ...task, section_id: sectionId });
+                            }
+                        });
+                        }
+                    }}
+                    className="text-sm bg-transparent border border-border rounded-lg px-2 py-1 outline-none focus:border-primary"
+                    >
+                    <option value="">Kein Abschnitt</option>
+                    {sections.map((section) => (
+                        <option key={section.id} value={section.id}>
+                        {section.name}
+                        </option>
+                    ))}
+                    </select>
+                </div>
+                )}
             </div>
 
             {/* Description */}

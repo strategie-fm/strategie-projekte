@@ -1,5 +1,5 @@
 import { supabase } from "./supabase";
-import type { Project, Task, TaskWithRelations, Label, Comment } from "@/types/database";
+import type { Project, Task, TaskWithRelations, Label, Comment, Section } from "@/types/database";
 
 // ============================================
 // PROJECTS
@@ -229,6 +229,7 @@ export async function getTasksByProject(projectId: string): Promise<TaskWithRela
       assignees: [],
       labels,
       subtaskCount: subtaskCounts[task.id] || undefined,
+      section_id: task.section_id,
     };
   });
 }
@@ -306,6 +307,7 @@ export async function createTask(task: {
   status?: Task["status"];
   due_date?: string;
   project_id?: string;
+  section_id?: string;
 }): Promise<Task | null> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return null;
@@ -318,6 +320,7 @@ export async function createTask(task: {
       priority: task.priority || "p4",
       status: task.status || "todo",
       due_date: task.due_date || null,
+      section_id: task.section_id || null,
       created_by: user.id,
     })
     .select()
@@ -346,7 +349,7 @@ export async function createTask(task: {
 
 export async function updateTask(
   id: string,
-  updates: Partial<Pick<Task, "title" | "description" | "status" | "priority" | "due_date" | "completed_at" | "position">>
+  updates: Partial<Pick<Task, "title" | "description" | "status" | "priority" | "due_date" | "completed_at" | "position" | "section_id">>
 ): Promise<Task | null> {
   const { data, error } = await supabase
     .from("tasks")
@@ -700,6 +703,105 @@ export async function deleteComment(id: string): Promise<boolean> {
 
   if (error) {
     console.error("Error deleting comment:", error);
+    return false;
+  }
+
+  return true;
+}
+
+// ============================================
+// SECTIONS
+// ============================================
+
+export async function getSections(projectId: string): Promise<Section[]> {
+  const { data, error } = await supabase
+    .from("sections")
+    .select("*")
+    .eq("project_id", projectId)
+    .order("position", { ascending: true });
+
+  if (error) {
+    console.error("Error fetching sections:", error);
+    return [];
+  }
+
+  return data || [];
+}
+
+export async function createSection(projectId: string, name: string): Promise<Section | null> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return null;
+
+  // Get max position
+  const { data: existing } = await supabase
+    .from("sections")
+    .select("position")
+    .eq("project_id", projectId)
+    .order("position", { ascending: false })
+    .limit(1);
+
+  const nextPosition = existing && existing.length > 0 ? existing[0].position + 1 : 0;
+
+  const { data, error } = await supabase
+    .from("sections")
+    .insert({
+      name,
+      project_id: projectId,
+      position: nextPosition,
+      created_by: user.id,
+    })
+    .select()
+    .single();
+
+  if (error) {
+    console.error("Error creating section:", error);
+    return null;
+  }
+
+  return data;
+}
+
+export async function updateSection(
+  id: string,
+  updates: Partial<Pick<Section, "name" | "position">>
+): Promise<Section | null> {
+  const { data, error } = await supabase
+    .from("sections")
+    .update({ ...updates, updated_at: new Date().toISOString() })
+    .eq("id", id)
+    .select()
+    .single();
+
+  if (error) {
+    console.error("Error updating section:", error);
+    return null;
+  }
+
+  return data;
+}
+
+export async function deleteSection(id: string): Promise<boolean> {
+  const { error } = await supabase
+    .from("sections")
+    .delete()
+    .eq("id", id);
+
+  if (error) {
+    console.error("Error deleting section:", error);
+    return false;
+  }
+
+  return true;
+}
+
+export async function moveTaskToSection(taskId: string, sectionId: string | null): Promise<boolean> {
+  const { error } = await supabase
+    .from("tasks")
+    .update({ section_id: sectionId, updated_at: new Date().toISOString() })
+    .eq("id", taskId);
+
+  if (error) {
+    console.error("Error moving task to section:", error);
     return false;
   }
 

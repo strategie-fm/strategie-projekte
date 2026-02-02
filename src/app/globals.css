@@ -4,6 +4,14 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --sidebar-width: 256px;
+}
+
+.ml-sidebar-width {
+  margin-left: var(--sidebar-width);
+}
+
 html {
   -webkit-font-smoothing: antialiased;
 }
