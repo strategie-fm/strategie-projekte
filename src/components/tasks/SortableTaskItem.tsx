@@ -273,7 +273,9 @@ export function SortableTaskItem({
 
           {/* Recurring */}
           {task.is_recurring && (
-            <RotateCcw className="w-3 h-3 text-primary" title="Wiederkehrende Aufgabe" />
+            <span title="Wiederkehrende Aufgabe">
+              <RotateCcw className="w-3 h-3 text-primary" />
+            </span>
           )}
 
           {/* Priority Badge */}
