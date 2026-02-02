@@ -13,6 +13,9 @@ import { getProject, getTasksByProject, getSections } from "@/lib/database";
 import type { Project, TaskWithRelations, Section } from "@/types/database";
 import { FolderOpen, Settings, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { TaskFilters, TaskFilterState, filterTasks } from "@/components/filters/TaskFilters";
+import { getLabels } from "@/lib/database";
+import type { Label } from "@/types/database";
 
 export default function ProjectPage() {
   const params = useParams();
@@ -26,19 +29,27 @@ export default function ProjectPage() {
   const [selectedTask, setSelectedTask] = useState<TaskWithRelations | null>(null);
   const [showSettings, setShowSettings] = useState(false);
   const [showCompleted, setShowCompleted] = useState(false);
+  const [labels, setLabels] = useState<Label[]>([]);
+  const [filters, setFilters] = useState<TaskFilterState>({
+    priorities: [],
+    labels: [],
+    status: [],
+  });
 
   const loadData = async () => {
-    setLoading(true);
+  setLoading(true);
 
-    const [projectData, tasksData, sectionsData] = await Promise.all([
+  const [projectData, tasksData, sectionsData, labelsData] = await Promise.all([
       getProject(projectId),
       getTasksByProject(projectId),
       getSections(projectId),
+      getLabels(),
     ]);
 
     setProject(projectData);
     setTasks(tasksData);
     setSections(sectionsData);
+    setLabels(labelsData);
     setLoading(false);
   };
 
@@ -74,8 +85,13 @@ export default function ProjectPage() {
     router.push("/");
   };
 
-  const activeTasks = tasks.filter((t) => t.status !== "done");
-  const completedTasks = tasks.filter((t) => t.status === "done");
+  // Apply filters
+  const filteredTasks = filterTasks(tasks, filters);
+  const activeTasks = filteredTasks.filter((t) => t.status !== "done");
+  const completedTasks = filteredTasks.filter((t) => t.status === "done");
+
+  // Count for header (unfiltered)
+  const totalActiveTasks = tasks.filter((t) => t.status !== "done").length;
 
   if (loading) {
     return (
@@ -121,9 +137,18 @@ export default function ProjectPage() {
                 className="w-3 h-3 rounded"
                 style={{ backgroundColor: project.color }}
               />
-              Aufgaben ({activeTasks.length})
+              Aufgaben ({activeTasks.length}
+              {filters.priorities.length > 0 || filters.labels.length > 0 || filters.status.length > 0
+                ? ` von ${totalActiveTasks}`
+                : ""
+              })
             </h2>
             <div className="flex items-center gap-2">
+              <TaskFilters
+                filters={filters}
+                onFiltersChange={setFilters}
+                availableLabels={labels}
+              />
               {completedTasks.length > 0 && (
                 <button
                   onClick={() => setShowCompleted(!showCompleted)}
@@ -154,11 +179,16 @@ export default function ProjectPage() {
               <SectionList
                 projectId={projectId}
                 sections={sections}
-                tasks={tasks}
+                tasks={filteredTasks}
                 onSectionsChange={setSections}
                 onTaskUpdate={handleTaskUpdate}
                 onTaskClick={setSelectedTask}
-                onTasksReorder={setTasks}
+                onTasksReorder={(reorderedTasks) => {
+                  // Merge reordered filtered tasks back with unfiltered tasks
+                  const filteredIds = new Set(reorderedTasks.map(t => t.id));
+                  const unchangedTasks = tasks.filter(t => !filteredIds.has(t.id));
+                  setTasks([...unchangedTasks, ...reorderedTasks]);
+                }}
               />
 
               {/* Completed Tasks */}

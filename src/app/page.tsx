@@ -6,20 +6,30 @@ import { Header } from "@/components/layout/Header";
 import { SortableTaskList } from "@/components/tasks/SortableTaskList";
 import { QuickAddTask } from "@/components/tasks/QuickAddTask";
 import { TaskDetailPanel } from "@/components/tasks/TaskDetailPanel";
-import { getTasks } from "@/lib/database";
-import type { TaskWithRelations } from "@/types/database";
+import { getTasks, getLabels } from "@/lib/database";
+import type { TaskWithRelations, Label } from "@/types/database";
 import { Calendar } from "lucide-react";
+import { TaskFilters, TaskFilterState, filterTasks } from "@/components/filters/TaskFilters";
 
 export default function Home() {
   const [overdueTasks, setOverdueTasks] = useState<TaskWithRelations[]>([]);
   const [todayTasks, setTodayTasks] = useState<TaskWithRelations[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedTask, setSelectedTask] = useState<TaskWithRelations | null>(null);
+  const [labels, setLabels] = useState<Label[]>([]);
+  const [filters, setFilters] = useState<TaskFilterState>({
+    priorities: [],
+    labels: [],
+    status: [],
+  });
 
   const loadTasks = async () => {
     setLoading(true);
 
-    const allTasks = await getTasks();
+    const [allTasks, labelsData] = await Promise.all([
+      getTasks(),
+      getLabels(),
+    ]);
 
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -51,6 +61,7 @@ export default function Home() {
 
     setOverdueTasks(overdue);
     setTodayTasks([...todayList, ...noDueDate]);
+    setLabels(labelsData);
     setLoading(false);
   };
 
@@ -70,7 +81,6 @@ export default function Home() {
         prev.map((t) => (t.id === updatedTask.id ? updatedTask : t))
       );
     }
-    // Update selected task if open
     if (selectedTask?.id === updatedTask.id) {
       setSelectedTask(updatedTask);
     }
@@ -93,6 +103,10 @@ export default function Home() {
     year: "numeric",
   });
 
+  // Apply filters
+  const filteredOverdue = filterTasks(overdueTasks, filters);
+  const filteredToday = filterTasks(todayTasks, filters);
+
   return (
     <div className="min-h-screen bg-background">
       <Sidebar />
@@ -107,15 +121,24 @@ export default function Home() {
             </div>
           ) : (
             <>
+              {/* Filters */}
+              <div className="flex justify-end mb-4">
+                <TaskFilters
+                  filters={filters}
+                  onFiltersChange={setFilters}
+                  availableLabels={labels}
+                />
+              </div>
+
               {/* Überfällig Section */}
-              {overdueTasks.length > 0 && (
+              {filteredOverdue.length > 0 && (
                 <section className="mb-6">
                   <h2 className="text-sm font-semibold text-error mb-3 flex items-center gap-2">
                     <span className="w-2 h-2 rounded-full bg-error" />
-                    Überfällig ({overdueTasks.length})
+                    Überfällig ({filteredOverdue.length})
                   </h2>
                   <SortableTaskList
-                    tasks={overdueTasks}
+                    tasks={filteredOverdue}
                     onTasksReorder={setOverdueTasks}
                     onTaskUpdate={handleTaskUpdate}
                     onTaskClick={setSelectedTask}
@@ -127,11 +150,11 @@ export default function Home() {
               <section className="mb-6">
                 <h2 className="text-sm font-semibold text-text-secondary mb-3 flex items-center gap-2">
                   <span className="w-2 h-2 rounded-full bg-primary" />
-                  Heute ({todayTasks.length})
+                  Heute ({filteredToday.length})
                 </h2>
-                {todayTasks.length > 0 ? (
+                {filteredToday.length > 0 ? (
                   <SortableTaskList
-                    tasks={todayTasks}
+                    tasks={filteredToday}
                     onTasksReorder={setTodayTasks}
                     onTaskUpdate={handleTaskUpdate}
                     onTaskClick={setSelectedTask}
@@ -140,10 +163,14 @@ export default function Home() {
                   <div className="bg-surface rounded-xl shadow-sm border border-border p-12 text-center">
                     <Calendar className="w-12 h-12 text-text-muted mx-auto mb-4" />
                     <p className="text-text-muted mb-2">
-                      Keine Aufgaben für heute
+                      {filters.priorities.length > 0 || filters.labels.length > 0
+                        ? "Keine Aufgaben mit diesen Filtern"
+                        : "Keine Aufgaben für heute"}
                     </p>
                     <p className="text-sm text-text-muted">
-                      Genieße deinen Tag! 🎉
+                      {filters.priorities.length > 0 || filters.labels.length > 0
+                        ? "Passe die Filter an"
+                        : "Genieße deinen Tag! 🎉"}
                     </p>
                   </div>
                 )}

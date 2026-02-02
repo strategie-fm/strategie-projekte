@@ -6,19 +6,62 @@ import { Header } from "@/components/layout/Header";
 import { SortableTaskList } from "@/components/tasks/SortableTaskList";
 import { QuickAddTask } from "@/components/tasks/QuickAddTask";
 import { TaskDetailPanel } from "@/components/tasks/TaskDetailPanel";
-import { getInboxTasks } from "@/lib/database";
-import type { TaskWithRelations } from "@/types/database";
-import { Inbox as InboxIcon } from "lucide-react";
+import { getTasks, getLabels } from "@/lib/database";
+import type { TaskWithRelations, Label } from "@/types/database";
+import { Calendar } from "lucide-react";
+import { TaskFilters, TaskFilterState, filterTasks } from "@/components/filters/TaskFilters";
 
-export default function InboxPage() {
-  const [tasks, setTasks] = useState<TaskWithRelations[]>([]);
+export default function Home() {
+  const [overdueTasks, setOverdueTasks] = useState<TaskWithRelations[]>([]);
+  const [todayTasks, setTodayTasks] = useState<TaskWithRelations[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedTask, setSelectedTask] = useState<TaskWithRelations | null>(null);
+  const [labels, setLabels] = useState<Label[]>([]);
+  const [filters, setFilters] = useState<TaskFilterState>({
+    priorities: [],
+    labels: [],
+    status: [],
+  });
 
   const loadTasks = async () => {
     setLoading(true);
-    const data = await getInboxTasks();
-    setTasks(data.filter((t) => t.status !== "done"));
+
+    const [allTasks, labelsData] = await Promise.all([
+      getTasks(),
+      getLabels(),
+    ]);
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+
+    const overdue: TaskWithRelations[] = [];
+    const todayList: TaskWithRelations[] = [];
+    const noDueDate: TaskWithRelations[] = [];
+
+    allTasks.forEach((task) => {
+      if (task.status === "done") return;
+
+      if (!task.due_date) {
+        noDueDate.push(task);
+        return;
+      }
+
+      const taskDate = new Date(task.due_date);
+      taskDate.setHours(0, 0, 0, 0);
+
+      if (taskDate < today) {
+        overdue.push(task);
+      } else if (taskDate.getTime() === today.getTime()) {
+        todayList.push(task);
+      }
+    });
+
+    setOverdueTasks(overdue);
+    setTodayTasks([...todayList, ...noDueDate]);
+    setLabels(labelsData);
     setLoading(false);
   };
 
@@ -28,9 +71,13 @@ export default function InboxPage() {
 
   const handleTaskUpdate = (updatedTask: TaskWithRelations) => {
     if (updatedTask.status === "done") {
-      setTasks((prev) => prev.filter((t) => t.id !== updatedTask.id));
+      setOverdueTasks((prev) => prev.filter((t) => t.id !== updatedTask.id));
+      setTodayTasks((prev) => prev.filter((t) => t.id !== updatedTask.id));
     } else {
-      setTasks((prev) =>
+      setOverdueTasks((prev) =>
+        prev.map((t) => (t.id === updatedTask.id ? updatedTask : t))
+      );
+      setTodayTasks((prev) =>
         prev.map((t) => (t.id === updatedTask.id ? updatedTask : t))
       );
     }
@@ -40,7 +87,8 @@ export default function InboxPage() {
   };
 
   const handleTaskDelete = (taskId: string) => {
-    setTasks((prev) => prev.filter((t) => t.id !== taskId));
+    setOverdueTasks((prev) => prev.filter((t) => t.id !== taskId));
+    setTodayTasks((prev) => prev.filter((t) => t.id !== taskId));
     setSelectedTask(null);
   };
 
@@ -48,12 +96,23 @@ export default function InboxPage() {
     loadTasks();
   };
 
+  const todayDate = new Date().toLocaleDateString("de-DE", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+
+  // Apply filters
+  const filteredOverdue = filterTasks(overdueTasks, filters);
+  const filteredToday = filterTasks(todayTasks, filters);
+
   return (
     <div className="min-h-screen bg-background">
       <Sidebar />
 
       <main className="ml-sidebar-width">
-        <Header title="Inbox" subtitle="Aufgaben ohne Aufgabenliste" />
+        <Header title="Heute" subtitle={todayDate} />
 
         <div className="p-6">
           {loading ? (
@@ -62,32 +121,69 @@ export default function InboxPage() {
             </div>
           ) : (
             <>
-              <section className="mb-6">
-                {tasks.length > 0 ? (
+              {/* Filters */}
+              <div className="flex justify-end mb-4">
+                <TaskFilters
+                  filters={filters}
+                  onFiltersChange={setFilters}
+                  availableLabels={labels}
+                />
+              </div>
+
+              {/* Überfällig Section */}
+              {filteredOverdue.length > 0 && (
+                <section className="mb-6">
+                  <h2 className="text-sm font-semibold text-error mb-3 flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-error" />
+                    Überfällig ({filteredOverdue.length})
+                  </h2>
                   <SortableTaskList
-                    tasks={tasks}
-                    onTasksReorder={setTasks}
+                    tasks={filteredOverdue}
+                    onTasksReorder={setOverdueTasks}
                     onTaskUpdate={handleTaskUpdate}
                     onTaskClick={setSelectedTask}
-                    showProject={false}
+                  />
+                </section>
+              )}
+
+              {/* Heute Section */}
+              <section className="mb-6">
+                <h2 className="text-sm font-semibold text-text-secondary mb-3 flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-primary" />
+                  Heute ({filteredToday.length})
+                </h2>
+                {filteredToday.length > 0 ? (
+                  <SortableTaskList
+                    tasks={filteredToday}
+                    onTasksReorder={setTodayTasks}
+                    onTaskUpdate={handleTaskUpdate}
+                    onTaskClick={setSelectedTask}
                   />
                 ) : (
                   <div className="bg-surface rounded-xl shadow-sm border border-border p-12 text-center">
-                    <InboxIcon className="w-12 h-12 text-text-muted mx-auto mb-4" />
-                    <p className="text-text-muted mb-2">Deine Inbox ist leer</p>
+                    <Calendar className="w-12 h-12 text-text-muted mx-auto mb-4" />
+                    <p className="text-text-muted mb-2">
+                      {filters.priorities.length > 0 || filters.labels.length > 0
+                        ? "Keine Aufgaben mit diesen Filtern"
+                        : "Keine Aufgaben für heute"}
+                    </p>
                     <p className="text-sm text-text-muted">
-                      Aufgaben ohne Aufgabenliste landen hier
+                      {filters.priorities.length > 0 || filters.labels.length > 0
+                        ? "Passe die Filter an"
+                        : "Genieße deinen Tag! 🎉"}
                     </p>
                   </div>
                 )}
               </section>
 
+              {/* Quick Add */}
               <QuickAddTask onTaskCreated={handleTaskCreated} />
             </>
           )}
         </div>
       </main>
 
+      {/* Task Detail Panel */}
       <TaskDetailPanel
         task={selectedTask}
         isOpen={!!selectedTask}
