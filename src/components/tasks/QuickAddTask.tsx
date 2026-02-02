@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
-import { Plus, Calendar, Flag, X } from "lucide-react";
-import { createTask } from "@/lib/database";
+import { useState, useEffect } from "react";
+import { Plus, Calendar, ChevronDown } from "lucide-react";
+import { createTask, getProjects } from "@/lib/database";
 import type { Task, Project } from "@/types/database";
 
 interface QuickAddTaskProps {
@@ -15,7 +15,20 @@ export function QuickAddTask({ projectId, onTaskCreated }: QuickAddTaskProps) {
   const [title, setTitle] = useState("");
   const [priority, setPriority] = useState<Task["priority"]>("p4");
   const [dueDate, setDueDate] = useState("");
+  const [selectedProjectId, setSelectedProjectId] = useState<string | undefined>(projectId);
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [showProjectDropdown, setShowProjectDropdown] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
+
+  useEffect(() => {
+    // Load projects for dropdown
+    getProjects().then(setProjects);
+  }, []);
+
+  useEffect(() => {
+    // Update selected project when projectId prop changes
+    setSelectedProjectId(projectId);
+  }, [projectId]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -26,18 +39,23 @@ export function QuickAddTask({ projectId, onTaskCreated }: QuickAddTaskProps) {
       title: title.trim(),
       priority,
       due_date: dueDate || undefined,
-      project_id: projectId,
+      project_id: selectedProjectId,
     });
 
     if (task) {
       setTitle("");
       setPriority("p4");
       setDueDate("");
+      if (!projectId) {
+        setSelectedProjectId(undefined);
+      }
       setIsOpen(false);
       onTaskCreated?.(task);
     }
     setIsCreating(false);
   };
+
+  const selectedProject = projects.find(p => p.id === selectedProjectId);
 
   const priorityColors = {
     p1: "text-error border-error bg-error-light",
@@ -72,7 +90,7 @@ export function QuickAddTask({ projectId, onTaskCreated }: QuickAddTaskProps) {
         autoFocus
       />
 
-      <div className="flex items-center gap-2 mb-4">
+      <div className="flex items-center gap-2 mb-4 flex-wrap">
         {/* Due Date */}
         <div className="relative">
           <input
@@ -83,6 +101,64 @@ export function QuickAddTask({ projectId, onTaskCreated }: QuickAddTaskProps) {
           />
           <Calendar className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 text-text-muted" />
         </div>
+
+        {/* Project Selector */}
+        {!projectId && (
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setShowProjectDropdown(!showProjectDropdown)}
+              className="flex items-center gap-2 px-3 py-1.5 text-xs border border-border rounded-lg hover:border-primary transition-colors"
+            >
+              {selectedProject ? (
+                <>
+                  <span
+                    className="w-2 h-2 rounded-sm"
+                    style={{ backgroundColor: selectedProject.color }}
+                  />
+                  <span className="max-w-[100px] truncate">{selectedProject.name}</span>
+                </>
+              ) : (
+                <span className="text-text-muted">Projekt wählen</span>
+              )}
+              <ChevronDown className="w-3 h-3 text-text-muted" />
+            </button>
+
+            {showProjectDropdown && (
+              <div className="absolute top-full left-0 mt-1 w-48 bg-surface border border-border rounded-lg shadow-lg z-10">
+                <div className="py-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedProjectId(undefined);
+                      setShowProjectDropdown(false);
+                    }}
+                    className="w-full px-3 py-2 text-left text-xs hover:bg-primary-bg transition-colors text-text-muted"
+                  >
+                    Kein Projekt (Inbox)
+                  </button>
+                  {projects.map((project) => (
+                    <button
+                      key={project.id}
+                      type="button"
+                      onClick={() => {
+                        setSelectedProjectId(project.id);
+                        setShowProjectDropdown(false);
+                      }}
+                      className="w-full px-3 py-2 text-left text-xs hover:bg-primary-bg transition-colors flex items-center gap-2"
+                    >
+                      <span
+                        className="w-2 h-2 rounded-sm flex-shrink-0"
+                        style={{ backgroundColor: project.color }}
+                      />
+                      <span className="truncate">{project.name}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Priority */}
         <div className="flex items-center gap-1">
@@ -111,6 +187,7 @@ export function QuickAddTask({ projectId, onTaskCreated }: QuickAddTaskProps) {
             setTitle("");
             setPriority("p4");
             setDueDate("");
+            setShowProjectDropdown(false);
           }}
           className="px-3 py-1.5 text-sm text-text-muted hover:text-text-primary transition-colors"
         >
