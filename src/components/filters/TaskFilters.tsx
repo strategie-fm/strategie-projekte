@@ -181,10 +181,10 @@ export function TaskFilters({ filters, onFiltersChange, availableLabels }: TaskF
 }
 
 // Helper function to filter tasks
-export function filterTasks(
-  tasks: { priority: string; status: string; labels?: { id: string }[]; section_id?: string | null }[],
+export function filterTasks<T extends { priority: string; status: string; labels?: { id: string }[] }>(
+  tasks: T[],
   filters: TaskFilterState
-) {
+): T[] {
   return tasks.filter((task) => {
     // Priority filter
     if (filters.priorities.length > 0 && !filters.priorities.includes(task.priority)) {
