@@ -169,7 +169,6 @@ export function LabelSelector({ taskId, onLabelsChange }: LabelSelectorProps) {
                       )}
                       style={{ 
                         backgroundColor: label.color,
-                        ringColor: isSelected ? label.color : undefined,
                       }}
                     >
                       {isSelected && <Check className="w-3 h-3" />}
