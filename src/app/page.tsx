@@ -3,11 +3,12 @@
 import { useEffect, useState } from "react";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Header } from "@/components/layout/Header";
-import { TaskItem } from "@/components/tasks/TaskItem";
+import { SortableTaskList } from "@/components/tasks/SortableTaskList";
 import { QuickAddTask } from "@/components/tasks/QuickAddTask";
 import { TaskDetailModal } from "@/components/tasks/TaskDetailModal";
 import { getTasks } from "@/lib/database";
 import type { TaskWithRelations } from "@/types/database";
+import { Calendar } from "lucide-react";
 
 export default function Home() {
   const [overdueTasks, setOverdueTasks] = useState<TaskWithRelations[]>([]);
@@ -17,12 +18,12 @@ export default function Home() {
 
   const loadTasks = async () => {
     setLoading(true);
-    
+
     const allTasks = await getTasks();
-    
+
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    
+
     const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);
 
@@ -32,7 +33,7 @@ export default function Home() {
 
     allTasks.forEach((task) => {
       if (task.status === "done") return;
-      
+
       if (!task.due_date) {
         noDueDate.push(task);
         return;
@@ -108,16 +109,12 @@ export default function Home() {
                     <span className="w-2 h-2 rounded-full bg-error" />
                     Überfällig ({overdueTasks.length})
                   </h2>
-                  <div className="bg-surface rounded-xl shadow-sm border border-border">
-                    {overdueTasks.map((task) => (
-                      <TaskItem
-                        key={task.id}
-                        task={task}
-                        onUpdate={handleTaskUpdate}
-                        onClick={setSelectedTask}
-                      />
-                    ))}
-                  </div>
+                  <SortableTaskList
+                    tasks={overdueTasks}
+                    onTasksReorder={setOverdueTasks}
+                    onTaskUpdate={handleTaskUpdate}
+                    onTaskClick={setSelectedTask}
+                  />
                 </section>
               )}
 
@@ -128,20 +125,20 @@ export default function Home() {
                   Heute ({todayTasks.length})
                 </h2>
                 {todayTasks.length > 0 ? (
-                  <div className="bg-surface rounded-xl shadow-sm border border-border">
-                    {todayTasks.map((task) => (
-                      <TaskItem
-                        key={task.id}
-                        task={task}
-                        onUpdate={handleTaskUpdate}
-                        onClick={setSelectedTask}
-                      />
-                    ))}
-                  </div>
+                  <SortableTaskList
+                    tasks={todayTasks}
+                    onTasksReorder={setTodayTasks}
+                    onTaskUpdate={handleTaskUpdate}
+                    onTaskClick={setSelectedTask}
+                  />
                 ) : (
-                  <div className="bg-surface rounded-xl shadow-sm border border-border p-8 text-center">
-                    <p className="text-text-muted">
-                      Keine Aufgaben für heute. Genieße deinen Tag! 🎉
+                  <div className="bg-surface rounded-xl shadow-sm border border-border p-12 text-center">
+                    <Calendar className="w-12 h-12 text-text-muted mx-auto mb-4" />
+                    <p className="text-text-muted mb-2">
+                      Keine Aufgaben für heute
+                    </p>
+                    <p className="text-sm text-text-muted">
+                      Genieße deinen Tag! 🎉
                     </p>
                   </div>
                 )}

@@ -3,8 +3,9 @@
 import { useEffect, useState } from "react";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Header } from "@/components/layout/Header";
-import { TaskItem } from "@/components/tasks/TaskItem";
+import { SortableTaskList } from "@/components/tasks/SortableTaskList";
 import { QuickAddTask } from "@/components/tasks/QuickAddTask";
+import { TaskDetailModal } from "@/components/tasks/TaskDetailModal";
 import { getInboxTasks } from "@/lib/database";
 import type { TaskWithRelations } from "@/types/database";
 import { Inbox as InboxIcon } from "lucide-react";
@@ -12,11 +13,12 @@ import { Inbox as InboxIcon } from "lucide-react";
 export default function InboxPage() {
   const [tasks, setTasks] = useState<TaskWithRelations[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedTask, setSelectedTask] = useState<TaskWithRelations | null>(null);
 
   const loadTasks = async () => {
     setLoading(true);
     const data = await getInboxTasks();
-    setTasks(data.filter(t => t.status !== "done"));
+    setTasks(data.filter((t) => t.status !== "done"));
     setLoading(false);
   };
 
@@ -34,6 +36,10 @@ export default function InboxPage() {
     }
   };
 
+  const handleTaskDelete = (taskId: string) => {
+    setTasks((prev) => prev.filter((t) => t.id !== taskId));
+  };
+
   const handleTaskCreated = () => {
     loadTasks();
   };
@@ -43,10 +49,7 @@ export default function InboxPage() {
       <Sidebar />
 
       <main className="ml-sidebar-width">
-        <Header
-          title="Inbox"
-          subtitle="Aufgaben ohne Projekt"
-        />
+        <Header title="Inbox" subtitle="Aufgaben ohne Projekt" />
 
         <div className="p-6">
           {loading ? (
@@ -57,16 +60,13 @@ export default function InboxPage() {
             <>
               <section className="mb-6">
                 {tasks.length > 0 ? (
-                  <div className="bg-surface rounded-xl shadow-sm border border-border">
-                    {tasks.map((task) => (
-                      <TaskItem
-                        key={task.id}
-                        task={task}
-                        onUpdate={handleTaskUpdate}
-                        showProject={false}
-                      />
-                    ))}
-                  </div>
+                  <SortableTaskList
+                    tasks={tasks}
+                    onTasksReorder={setTasks}
+                    onTaskUpdate={handleTaskUpdate}
+                    onTaskClick={setSelectedTask}
+                    showProject={false}
+                  />
                 ) : (
                   <div className="bg-surface rounded-xl shadow-sm border border-border p-12 text-center">
                     <InboxIcon className="w-12 h-12 text-text-muted mx-auto mb-4" />
@@ -83,6 +83,14 @@ export default function InboxPage() {
           )}
         </div>
       </main>
+
+      <TaskDetailModal
+        task={selectedTask}
+        isOpen={!!selectedTask}
+        onClose={() => setSelectedTask(null)}
+        onUpdate={handleTaskUpdate}
+        onDelete={handleTaskDelete}
+      />
     </div>
   );
 }
