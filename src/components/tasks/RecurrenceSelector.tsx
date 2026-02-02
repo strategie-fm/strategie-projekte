@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { RotateCcw, X, Calendar, ChevronDown } from "lucide-react";
+import { RotateCcw, X, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { TaskRecurrence, RecurrenceType } from "@/types/database";
 import { getTaskRecurrence, createTaskRecurrence, updateTaskRecurrence, deleteTaskRecurrence } from "@/lib/database";
@@ -12,7 +12,9 @@ interface RecurrenceSelectorProps {
   onRecurrenceChange?: (recurrence: TaskRecurrence | null) => void;
 }
 
-const RECURRENCE_OPTIONS: { value: RecurrenceType | "none"; label: string }[] = [
+type RecurrenceOptionValue = RecurrenceType | "none";
+
+const RECURRENCE_OPTIONS: { value: RecurrenceOptionValue; label: string }[] = [
   { value: "none", label: "Keine Wiederholung" },
   { value: "daily", label: "Täglich" },
   { value: "weekly", label: "Wöchentlich" },
@@ -64,7 +66,7 @@ export function RecurrenceSelector({ taskId, dueDate, onRecurrenceChange }: Recu
     loadRecurrence();
   }, [loadRecurrence]);
 
-  const handleSelectType = async (type: RecurrenceType | "none") => {
+  const handleSelectType = async (type: RecurrenceOptionValue) => {
     if (type === "none") {
       // Löschen
       if (recurrence) {
@@ -183,6 +185,11 @@ export function RecurrenceSelector({ taskId, dueDate, onRecurrenceChange }: Recu
     }
   };
 
+  const isOptionSelected = (optionValue: RecurrenceOptionValue): boolean => {
+    if (optionValue === "none" || optionValue === "custom") return false;
+    return recurrence?.recurrence_type === optionValue;
+  };
+
   if (loading) {
     return (
       <div className="flex items-center gap-2 text-text-muted text-sm">
@@ -222,14 +229,14 @@ export function RecurrenceSelector({ taskId, dueDate, onRecurrenceChange }: Recu
                 key={option.value}
                 onClick={() => handleSelectType(option.value)}
                 className={cn(
-                "w-full px-4 py-2 text-left text-sm hover:bg-divider transition-colors flex items-center justify-between",
-                option.value !== "none" && option.value !== "custom" && recurrence?.recurrence_type === option.value
+                  "w-full px-4 py-2 text-left text-sm hover:bg-divider transition-colors flex items-center justify-between",
+                  isOptionSelected(option.value)
                     ? "bg-primary-surface text-primary"
                     : "text-text-primary"
                 )}
               >
                 {option.label}
-                {recurrence?.recurrence_type === option.value && option.value !== "none" && option.value !== "custom" && (
+                {isOptionSelected(option.value) && (
                   <span className="text-primary">✓</span>
                 )}
               </button>
