@@ -222,8 +222,8 @@ export function RecurrenceSelector({ taskId, dueDate, onRecurrenceChange }: Recu
                 key={option.value}
                 onClick={() => handleSelectType(option.value)}
                 className={cn(
-                  "w-full px-4 py-2 text-left text-sm hover:bg-divider transition-colors flex items-center justify-between",
-                  recurrence?.recurrence_type === option.value && option.value !== "none" && option.value !== "custom"
+                "w-full px-4 py-2 text-left text-sm hover:bg-divider transition-colors flex items-center justify-between",
+                option.value !== "none" && option.value !== "custom" && recurrence?.recurrence_type === option.value
                     ? "bg-primary-surface text-primary"
                     : "text-text-primary"
                 )}
