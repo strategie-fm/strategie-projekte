@@ -283,7 +283,7 @@ export async function createTask(task: {
 
 export async function updateTask(
   id: string,
-  updates: Partial<Pick<Task, "title" | "description" | "priority" | "status" | "due_date" | "completed_at">>
+  updates: Partial<Pick<Task, "title" | "description" | "status" | "priority" | "due_date" | "completed_at" | "position">>
 ): Promise<Task | null> {
   const { data, error } = await supabase
     .from("tasks")
