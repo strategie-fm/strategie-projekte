@@ -7,6 +7,7 @@ import {
   LayoutDashboard,
   Home,
   User,
+  Users,
   Inbox,
   Calendar,
   CalendarDays,
@@ -39,6 +40,7 @@ const navItems = [
   { href: "/today", icon: Calendar, label: "Heute" },
   { href: "/upcoming", icon: CalendarDays, label: "Anstehend" },
   { href: "/search", icon: Search, label: "Suche" },
+  { href: "/teams", icon: Users, label: "Teams" },
 ];
 
 export function Sidebar() {

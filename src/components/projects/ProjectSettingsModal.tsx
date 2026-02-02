@@ -2,9 +2,11 @@
 
 import { useState, useEffect } from "react";
 import { Modal } from "@/components/ui/Modal";
-import { Trash2, AlertCircle } from "lucide-react";
+import { Trash2, AlertCircle, Settings, Users } from "lucide-react";
 import { updateProject, deleteProject } from "@/lib/database";
 import type { Project } from "@/types/database";
+import { ProjectTeamAccess } from "./ProjectTeamAccess";
+import { cn } from "@/lib/utils";
 
 interface ProjectSettingsModalProps {
   project: Project | null;
@@ -27,6 +29,8 @@ const PROJECT_COLORS = [
   "#06b6d4",
 ];
 
+type Tab = "general" | "team";
+
 export function ProjectSettingsModal({
   project,
   isOpen,
@@ -34,6 +38,7 @@ export function ProjectSettingsModal({
   onUpdate,
   onDelete,
 }: ProjectSettingsModalProps) {
+  const [activeTab, setActiveTab] = useState<Tab>("general");
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [color, setColor] = useState(PROJECT_COLORS[0]);
@@ -48,6 +53,7 @@ export function ProjectSettingsModal({
       setDescription(project.description || "");
       setColor(project.color);
       setShowDeleteConfirm(false);
+      setActiveTab("general");
     }
   }, [project]);
 
@@ -86,118 +92,153 @@ export function ProjectSettingsModal({
   if (!project) return null;
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Aufgabenliste bearbeiten" size="md">
+    <Modal isOpen={isOpen} onClose={onClose} title="Aufgabenliste bearbeiten" size="lg">
+      {/* Tabs */}
+      <div className="flex border-b border-border">
+        <button
+          onClick={() => setActiveTab("general")}
+          className={cn(
+            "flex items-center gap-2 px-6 py-3 text-sm font-medium transition-colors border-b-2 -mb-px",
+            activeTab === "general"
+              ? "border-primary text-primary"
+              : "border-transparent text-text-muted hover:text-text-primary"
+          )}
+        >
+          <Settings className="w-4 h-4" />
+          Allgemein
+        </button>
+        <button
+          onClick={() => setActiveTab("team")}
+          className={cn(
+            "flex items-center gap-2 px-6 py-3 text-sm font-medium transition-colors border-b-2 -mb-px",
+            activeTab === "team"
+              ? "border-primary text-primary"
+              : "border-transparent text-text-muted hover:text-text-primary"
+          )}
+        >
+          <Users className="w-4 h-4" />
+          Team-Zugriff
+        </button>
+      </div>
+
       <div className="p-6">
-        {/* Name */}
-        <div className="mb-4">
-          <label className="block text-sm font-medium text-text-secondary mb-1.5">
-            Name
-          </label>
-          <input
-            type="text"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            className="w-full px-3 py-2 border border-border rounded-lg focus:border-primary focus:ring-1 focus:ring-primary outline-none"
-            placeholder="Listenname..."
-          />
-        </div>
-
-        {/* Description */}
-        <div className="mb-4">
-          <label className="block text-sm font-medium text-text-secondary mb-1.5">
-            Beschreibung
-          </label>
-          <textarea
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            className="w-full px-3 py-2 border border-border rounded-lg focus:border-primary focus:ring-1 focus:ring-primary outline-none resize-none"
-            rows={3}
-            placeholder="Optionale Beschreibung..."
-          />
-        </div>
-
-        {/* Color */}
-        <div className="mb-6">
-          <label className="block text-sm font-medium text-text-secondary mb-2">
-            Farbe
-          </label>
-          <div className="flex flex-wrap gap-2">
-            {PROJECT_COLORS.map((c) => (
-              <button
-                key={c}
-                type="button"
-                onClick={() => setColor(c)}
-                className={`w-8 h-8 rounded-lg transition-all ${
-                  color === c ? "ring-2 ring-offset-2 ring-primary scale-110" : "hover:scale-105"
-                }`}
-                style={{ backgroundColor: c }}
+        {activeTab === "general" ? (
+          <>
+            {/* Name */}
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-text-secondary mb-1.5">
+                Name
+              </label>
+              <input
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="w-full px-3 py-2 border border-border rounded-lg focus:border-primary focus:ring-1 focus:ring-primary outline-none"
+                placeholder="Listenname..."
               />
-            ))}
-          </div>
-        </div>
+            </div>
 
-        {/* Delete Confirmation */}
-        {showDeleteConfirm && (
-          <div className="mb-6 p-4 bg-error-light border border-error/20 rounded-lg">
-            <div className="flex items-start gap-3">
-              <AlertCircle className="w-5 h-5 text-error flex-shrink-0 mt-0.5" />
-              <div className="flex-1">
-                <p className="text-sm font-medium text-error">
-                  Aufgabenliste wirklich löschen?
-                </p>
-                <p className="text-sm text-error/80 mt-1">
-                  Alle Aufgaben in dieser Liste werden ebenfalls gelöscht.
-                </p>
-                <div className="flex gap-2 mt-3">
+            {/* Description */}
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-text-secondary mb-1.5">
+                Beschreibung
+              </label>
+              <textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                className="w-full px-3 py-2 border border-border rounded-lg focus:border-primary focus:ring-1 focus:ring-primary outline-none resize-none"
+                rows={3}
+                placeholder="Optionale Beschreibung..."
+              />
+            </div>
+
+            {/* Color */}
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-text-secondary mb-2">
+                Farbe
+              </label>
+              <div className="flex flex-wrap gap-2">
+                {PROJECT_COLORS.map((c) => (
                   <button
-                    onClick={handleDelete}
-                    disabled={isDeleting}
-                    className="px-3 py-1.5 text-sm font-medium bg-error text-white rounded-lg hover:bg-error/90 disabled:opacity-50 transition-colors"
-                  >
-                    {isDeleting ? "Löschen..." : "Ja, löschen"}
-                  </button>
-                  <button
-                    onClick={() => setShowDeleteConfirm(false)}
-                    className="px-3 py-1.5 text-sm font-medium text-text-secondary hover:bg-divider rounded-lg transition-colors"
-                  >
-                    Abbrechen
-                  </button>
-                </div>
+                    key={c}
+                    type="button"
+                    onClick={() => setColor(c)}
+                    className={`w-8 h-8 rounded-lg transition-all ${
+                      color === c ? "ring-2 ring-offset-2 ring-primary scale-110" : "hover:scale-105"
+                    }`}
+                    style={{ backgroundColor: c }}
+                  />
+                ))}
               </div>
             </div>
-          </div>
+
+            {/* Delete Confirmation */}
+            {showDeleteConfirm && (
+              <div className="mb-6 p-4 bg-error-light border border-error/20 rounded-lg">
+                <div className="flex items-start gap-3">
+                  <AlertCircle className="w-5 h-5 text-error flex-shrink-0 mt-0.5" />
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-error">
+                      Aufgabenliste wirklich löschen?
+                    </p>
+                    <p className="text-sm text-error/80 mt-1">
+                      Alle Aufgaben in dieser Liste werden ebenfalls gelöscht.
+                    </p>
+                    <div className="flex gap-2 mt-3">
+                      <button
+                        onClick={handleDelete}
+                        disabled={isDeleting}
+                        className="px-3 py-1.5 text-sm font-medium bg-error text-white rounded-lg hover:bg-error/90 disabled:opacity-50 transition-colors"
+                      >
+                        {isDeleting ? "Löschen..." : "Ja, löschen"}
+                      </button>
+                      <button
+                        onClick={() => setShowDeleteConfirm(false)}
+                        className="px-3 py-1.5 text-sm font-medium text-text-secondary hover:bg-divider rounded-lg transition-colors"
+                      >
+                        Abbrechen
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Actions */}
+            <div className="flex items-center justify-between pt-4 border-t border-border">
+              {!showDeleteConfirm ? (
+                <button
+                  onClick={() => setShowDeleteConfirm(true)}
+                  className="flex items-center gap-2 px-3 py-2 text-sm text-error hover:bg-error-light rounded-lg transition-colors"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  Löschen
+                </button>
+              ) : (
+                <div />
+              )}
+
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={onClose}
+                  className="px-4 py-2 text-sm text-text-secondary hover:bg-divider rounded-lg transition-colors"
+                >
+                  Abbrechen
+                </button>
+                <button
+                  onClick={handleSave}
+                  disabled={!name.trim() || isSaving}
+                  className="px-4 py-2 text-sm font-medium bg-primary text-white rounded-lg hover:bg-primary-variant disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  {isSaving ? "Speichern..." : "Speichern"}
+                </button>
+              </div>
+            </div>
+          </>
+        ) : (
+          /* Team Access Tab */
+          <ProjectTeamAccess projectId={project.id} />
         )}
-
-        {/* Actions */}
-        <div className="flex items-center justify-between pt-4 border-t border-border">
-          {!showDeleteConfirm ? (
-            <button
-              onClick={() => setShowDeleteConfirm(true)}
-              className="flex items-center gap-2 px-3 py-2 text-sm text-error hover:bg-error-light rounded-lg transition-colors"
-            >
-              <Trash2 className="w-4 h-4" />
-              Löschen
-            </button>
-          ) : (
-            <div />
-          )}
-
-          <div className="flex items-center gap-2">
-            <button
-              onClick={onClose}
-              className="px-4 py-2 text-sm text-text-secondary hover:bg-divider rounded-lg transition-colors"
-            >
-              Abbrechen
-            </button>
-            <button
-              onClick={handleSave}
-              disabled={!name.trim() || isSaving}
-              className="px-4 py-2 text-sm font-medium bg-primary text-white rounded-lg hover:bg-primary-variant disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              {isSaving ? "Speichern..." : "Speichern"}
-            </button>
-          </div>
-        </div>
       </div>
     </Modal>
   );

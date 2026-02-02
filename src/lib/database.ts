@@ -9,10 +9,10 @@ export async function getProjects(): Promise<Project[]> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return [];
 
+  // RLS handles access control - no need to filter by created_by
   const { data, error } = await supabase
     .from("projects")
     .select("*")
-    .eq("created_by", user.id)
     .is("archived_at", null)
     .order("position", { ascending: true });
 
@@ -107,10 +107,10 @@ export async function getTasks(): Promise<TaskWithRelations[]> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return [];
 
+  // RLS handles access control - no need to filter by created_by
   const { data: tasks, error } = await supabase
     .from("tasks")
     .select("*")
-    .eq("created_by", user.id)
     .is("parent_task_id", null)
     .neq("status", "archived")
     .order("position", { ascending: true });
@@ -174,6 +174,7 @@ export async function getTasksByProject(projectId: string): Promise<TaskWithRela
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return [];
 
+  // RLS handles access control
   const { data: taskProjectLinks, error: linkError } = await supabase
     .from("task_projects")
     .select("task_id")
@@ -185,6 +186,7 @@ export async function getTasksByProject(projectId: string): Promise<TaskWithRela
 
   const taskIds = taskProjectLinks.map(tp => tp.task_id);
 
+  // RLS handles access control - no need to filter by created_by
   const { data: tasks, error } = await supabase
     .from("tasks")
     .select("*")
@@ -238,6 +240,7 @@ export async function getInboxTasks(): Promise<TaskWithRelations[]> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return [];
 
+  // Inbox shows only user's own tasks without project assignment
   const { data: tasks, error } = await supabase
     .from("tasks")
     .select("*")
@@ -391,10 +394,10 @@ export async function searchTasks(query: string): Promise<TaskWithRelations[]> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user || !query.trim()) return [];
 
+  // RLS handles access control - search across all accessible tasks
   const { data: tasks, error } = await supabase
     .from("tasks")
     .select("*")
-    .eq("created_by", user.id)
     .neq("status", "archived")
     .or(`title.ilike.%${query}%,description.ilike.%${query}%`)
     .order("created_at", { ascending: false })
@@ -540,6 +543,7 @@ export async function getLabels(): Promise<Label[]> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return [];
 
+  // Labels are personal - keep created_by filter
   const { data, error } = await supabase
     .from("labels")
     .select("*")
@@ -714,6 +718,7 @@ export async function deleteComment(id: string): Promise<boolean> {
 // ============================================
 
 export async function getSections(projectId: string): Promise<Section[]> {
+  // RLS handles access control
   const { data, error } = await supabase
     .from("sections")
     .select("*")
@@ -841,11 +846,10 @@ export async function getAllProjectsProgress(): Promise<Record<string, { total: 
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return {};
 
-  // Get all projects
+  // RLS handles access control - get all accessible projects
   const { data: projects } = await supabase
     .from("projects")
     .select("id")
-    .eq("created_by", user.id)
     .is("archived_at", null);
 
   if (!projects || projects.length === 0) return {};
@@ -981,6 +985,276 @@ export async function unassignTask(taskId: string, userId: string): Promise<bool
 
   if (error) {
     console.error("Error unassigning task:", error);
+    return false;
+  }
+
+  return true;
+}
+
+import type { Team, TeamMember, TeamWithMembers, ProjectTeamAccess, TeamRole, AccessLevel } from "@/types/database";
+
+// ============================================
+// TEAMS
+// ============================================
+
+export async function getTeams(): Promise<Team[]> {
+  const { data, error } = await supabase
+    .from("teams")
+    .select("*")
+    .order("name");
+
+  if (error) {
+    console.error("Error fetching teams:", error);
+    return [];
+  }
+
+  return data || [];
+}
+
+export async function getTeam(teamId: string): Promise<TeamWithMembers | null> {
+  const { data: team, error: teamError } = await supabase
+    .from("teams")
+    .select("*")
+    .eq("id", teamId)
+    .single();
+
+  if (teamError) {
+    console.error("Error fetching team:", teamError);
+    return null;
+  }
+
+  const { data: members, error: membersError } = await supabase
+    .from("team_members")
+    .select(`
+      *,
+      profile:profiles(*)
+    `)
+    .eq("team_id", teamId);
+
+  if (membersError) {
+    console.error("Error fetching team members:", membersError);
+    return { ...team, members: [] };
+  }
+
+  return { ...team, members: members || [] };
+}
+
+export async function createTeam(name: string, description?: string, color?: string): Promise<Team | null> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return null;
+
+  const { data: team, error: teamError } = await supabase
+    .from("teams")
+    .insert({
+      name,
+      description: description || null,
+      color: color || "#183c6c",
+      created_by: user.id,
+    })
+    .select()
+    .single();
+
+  if (teamError) {
+    console.error("Error creating team:", teamError);
+    return null;
+  }
+
+  // Add creator as owner
+  const { error: memberError } = await supabase
+    .from("team_members")
+    .insert({
+      team_id: team.id,
+      user_id: user.id,
+      role: "owner",
+    });
+
+  if (memberError) {
+    console.error("Error adding owner to team:", memberError);
+  }
+
+  return team;
+}
+
+export async function updateTeam(teamId: string, updates: Partial<Team>): Promise<Team | null> {
+  const { data, error } = await supabase
+    .from("teams")
+    .update({ ...updates, updated_at: new Date().toISOString() })
+    .eq("id", teamId)
+    .select()
+    .single();
+
+  if (error) {
+    console.error("Error updating team:", error);
+    return null;
+  }
+
+  return data;
+}
+
+export async function deleteTeam(teamId: string): Promise<boolean> {
+  const { error } = await supabase
+    .from("teams")
+    .delete()
+    .eq("id", teamId);
+
+  if (error) {
+    console.error("Error deleting team:", error);
+    return false;
+  }
+
+  return true;
+}
+
+// ============================================
+// TEAM MEMBERS
+// ============================================
+
+export async function addTeamMember(teamId: string, userId: string, role: TeamRole = "member"): Promise<TeamMember | null> {
+  const { data, error } = await supabase
+    .from("team_members")
+    .insert({
+      team_id: teamId,
+      user_id: userId,
+      role,
+    })
+    .select(`
+      *,
+      profile:profiles(*)
+    `)
+    .single();
+
+  if (error) {
+    console.error("Error adding team member:", error);
+    return null;
+  }
+
+  return data;
+}
+
+export async function removeTeamMember(teamId: string, userId: string): Promise<boolean> {
+  const { error } = await supabase
+    .from("team_members")
+    .delete()
+    .eq("team_id", teamId)
+    .eq("user_id", userId);
+
+  if (error) {
+    console.error("Error removing team member:", error);
+    return false;
+  }
+
+  return true;
+}
+
+export async function updateTeamMemberRole(teamId: string, userId: string, role: TeamRole): Promise<boolean> {
+  const { error } = await supabase
+    .from("team_members")
+    .update({ role })
+    .eq("team_id", teamId)
+    .eq("user_id", userId);
+
+  if (error) {
+    console.error("Error updating team member role:", error);
+    return false;
+  }
+
+  return true;
+}
+
+export async function getUserTeams(userId: string): Promise<Team[]> {
+  const { data, error } = await supabase
+    .from("team_members")
+    .select(`
+      team:teams(*)
+    `)
+    .eq("user_id", userId);
+
+  if (error) {
+    console.error("Error fetching user teams:", error);
+    return [];
+  }
+
+  return data?.map((d) => d.team).filter(Boolean) as Team[] || [];
+}
+
+// ============================================
+// PROJECT TEAM ACCESS
+// ============================================
+
+export async function getProjectTeamAccess(projectId: string): Promise<ProjectTeamAccess[]> {
+  const { data, error } = await supabase
+    .from("project_team_access")
+    .select(`
+      *,
+      team:teams(*)
+    `)
+    .eq("project_id", projectId);
+
+  if (error) {
+    console.error("Error fetching project team access:", error);
+    return [];
+  }
+
+  return data || [];
+}
+
+export async function grantProjectAccess(projectId: string, teamId: string, accessLevel: AccessLevel = "view"): Promise<ProjectTeamAccess | null> {
+  const { data: { user } } = await supabase.auth.getUser();
+
+  const { data, error } = await supabase
+    .from("project_team_access")
+    .insert({
+      project_id: projectId,
+      team_id: teamId,
+      access_level: accessLevel,
+      granted_by: user?.id,
+    })
+    .select()
+    .single();
+
+  if (error) {
+    console.error("Error granting project access:", error);
+    return null;
+  }
+
+  // Load the team separately
+  if (data) {
+    const { data: team } = await supabase
+      .from("teams")
+      .select("*")
+      .eq("id", teamId)
+      .single();
+    
+    return { ...data, team } as ProjectTeamAccess;
+  }
+
+  return data;
+}
+
+export async function updateProjectAccess(projectId: string, teamId: string, accessLevel: AccessLevel): Promise<boolean> {
+  const { error } = await supabase
+    .from("project_team_access")
+    .update({ access_level: accessLevel })
+    .eq("project_id", projectId)
+    .eq("team_id", teamId);
+
+  if (error) {
+    console.error("Error updating project access:", error);
+    return false;
+  }
+
+  return true;
+}
+
+export async function revokeProjectAccess(projectId: string, teamId: string): Promise<boolean> {
+  const { error } = await supabase
+    .from("project_team_access")
+    .delete()
+    .eq("project_id", projectId)
+    .eq("team_id", teamId);
+
+  if (error) {
+    console.error("Error revoking project access:", error);
     return false;
   }
 

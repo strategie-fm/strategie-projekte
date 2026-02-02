@@ -131,3 +131,41 @@ export interface TaskAssignee {
   // Joined data
   profile?: Profile;
 }
+
+// Team Types
+export type TeamRole = "owner" | "admin" | "member" | "viewer";
+export type AccessLevel = "view" | "edit" | "admin";
+
+export interface Team {
+  id: string;
+  name: string;
+  description: string | null;
+  color: string;
+  avatar_url: string | null;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface TeamMember {
+  id: string;
+  team_id: string;
+  user_id: string;
+  role: TeamRole;
+  joined_at: string;
+  profile?: Profile;
+}
+
+export interface TeamWithMembers extends Team {
+  members: TeamMember[];
+}
+
+export interface ProjectTeamAccess {
+  id: string;
+  project_id: string;
+  team_id: string;
+  access_level: AccessLevel;
+  granted_by: string | null;
+  granted_at: string;
+  team?: Team;
+}
