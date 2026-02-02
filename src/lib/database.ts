@@ -1378,7 +1378,7 @@ export function calculateNextDueDate(
   monthDay?: number | null
 ): string {
   const current = new Date(currentDueDate);
-  let next = new Date(current);
+  const next = new Date(current);
 
   switch (recurrenceType) {
     case "daily":
