@@ -7,7 +7,7 @@ import { Header } from "@/components/layout/Header";
 import { SortableTaskList } from "@/components/tasks/SortableTaskList";
 import { SortableTaskItem } from "@/components/tasks/SortableTaskItem";
 import { QuickAddTask } from "@/components/tasks/QuickAddTask";
-import { TaskDetailModal } from "@/components/tasks/TaskDetailModal";
+import { TaskDetailPanel } from "@/components/tasks/TaskDetailPanel";
 import { ProjectSettingsModal } from "@/components/projects/ProjectSettingsModal";
 import { getProject, getTasksByProject } from "@/lib/database";
 import type { Project, TaskWithRelations } from "@/types/database";
@@ -49,10 +49,14 @@ export default function ProjectPage() {
     setTasks((prev) =>
       prev.map((t) => (t.id === updatedTask.id ? updatedTask : t))
     );
+    if (selectedTask?.id === updatedTask.id) {
+      setSelectedTask(updatedTask);
+    }
   };
 
   const handleTaskDelete = (taskId: string) => {
     setTasks((prev) => prev.filter((t) => t.id !== taskId));
+    setSelectedTask(null);
   };
 
   const handleTaskCreated = () => {
@@ -89,7 +93,7 @@ export default function ProjectPage() {
         <Sidebar />
         <main className="ml-sidebar-width">
           <div className="flex items-center justify-center h-screen">
-            <p className="text-text-muted">Projekt nicht gefunden</p>
+            <p className="text-text-muted">Aufgabenliste nicht gefunden</p>
           </div>
         </main>
       </div>
@@ -177,7 +181,6 @@ export default function ProjectPage() {
               </>
             ) : (
               <>
-                {/* Empty State or only completed */}
                 {completedTasks.length > 0 ? (
                   <>
                     <div className="bg-surface rounded-xl shadow-sm border border-border p-8 text-center mb-4">
@@ -208,7 +211,7 @@ export default function ProjectPage() {
                   <div className="bg-surface rounded-xl shadow-sm border border-border p-12 text-center">
                     <FolderOpen className="w-12 h-12 text-text-muted mx-auto mb-4" />
                     <p className="text-text-muted mb-2">
-                      Keine Aufgaben in diesem Projekt
+                      Keine Aufgaben in dieser Aufgabenliste
                     </p>
                     <p className="text-sm text-text-muted">
                       Füge deine erste Aufgabe hinzu
@@ -223,8 +226,8 @@ export default function ProjectPage() {
         </div>
       </main>
 
-      {/* Task Detail Modal */}
-      <TaskDetailModal
+      {/* Task Detail Panel */}
+      <TaskDetailPanel
         task={selectedTask}
         isOpen={!!selectedTask}
         onClose={() => setSelectedTask(null)}

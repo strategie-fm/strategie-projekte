@@ -5,7 +5,7 @@ import { Sidebar } from "@/components/layout/Sidebar";
 import { Header } from "@/components/layout/Header";
 import { SortableTaskList } from "@/components/tasks/SortableTaskList";
 import { QuickAddTask } from "@/components/tasks/QuickAddTask";
-import { TaskDetailModal } from "@/components/tasks/TaskDetailModal";
+import { TaskDetailPanel } from "@/components/tasks/TaskDetailPanel";
 import { getTasks } from "@/lib/database";
 import type { TaskWithRelations } from "@/types/database";
 import { Calendar } from "lucide-react";
@@ -70,11 +70,16 @@ export default function Home() {
         prev.map((t) => (t.id === updatedTask.id ? updatedTask : t))
       );
     }
+    // Update selected task if open
+    if (selectedTask?.id === updatedTask.id) {
+      setSelectedTask(updatedTask);
+    }
   };
 
   const handleTaskDelete = (taskId: string) => {
     setOverdueTasks((prev) => prev.filter((t) => t.id !== taskId));
     setTodayTasks((prev) => prev.filter((t) => t.id !== taskId));
+    setSelectedTask(null);
   };
 
   const handleTaskCreated = () => {
@@ -151,8 +156,8 @@ export default function Home() {
         </div>
       </main>
 
-      {/* Task Detail Modal */}
-      <TaskDetailModal
+      {/* Task Detail Panel */}
+      <TaskDetailPanel
         task={selectedTask}
         isOpen={!!selectedTask}
         onClose={() => setSelectedTask(null)}

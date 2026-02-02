@@ -86,7 +86,7 @@ export function ProjectSettingsModal({
   if (!project) return null;
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Projekt bearbeiten" size="md">
+    <Modal isOpen={isOpen} onClose={onClose} title="Aufgabenliste bearbeiten" size="md">
       <div className="p-6">
         {/* Name */}
         <div className="mb-4">
@@ -98,7 +98,7 @@ export function ProjectSettingsModal({
             value={name}
             onChange={(e) => setName(e.target.value)}
             className="w-full px-3 py-2 border border-border rounded-lg focus:border-primary focus:ring-1 focus:ring-primary outline-none"
-            placeholder="Projektname..."
+            placeholder="Listenname..."
           />
         </div>
 
@@ -143,10 +143,10 @@ export function ProjectSettingsModal({
               <AlertCircle className="w-5 h-5 text-error flex-shrink-0 mt-0.5" />
               <div className="flex-1">
                 <p className="text-sm font-medium text-error">
-                  Projekt wirklich löschen?
+                  Aufgabenliste wirklich löschen?
                 </p>
                 <p className="text-sm text-error/80 mt-1">
-                  Alle Aufgaben in diesem Projekt werden ebenfalls gelöscht.
+                  Alle Aufgaben in dieser Liste werden ebenfalls gelöscht.
                 </p>
                 <div className="flex gap-2 mt-3">
                   <button

@@ -165,7 +165,7 @@ export function Sidebar() {
         <div className="mt-8">
           <div className="flex items-center justify-between px-3 mb-2">
             <span className="text-xs font-medium text-sidebar-text/60 uppercase tracking-wider">
-              Projekte
+              Aufgabenlisten
             </span>
             <button 
               onClick={() => setShowNewProject(true)}
@@ -182,7 +182,7 @@ export function Sidebar() {
                 type="text"
                 value={newProjectName}
                 onChange={(e) => setNewProjectName(e.target.value)}
-                placeholder="Projektname..."
+                placeholder="Listenname..."
                 className="w-full px-3 py-1.5 text-sm bg-white/10 border border-sidebar-hover rounded-lg text-white placeholder:text-sidebar-text/50 focus:outline-none focus:border-white/30"
                 autoFocus
                 onBlur={() => {
@@ -203,7 +203,7 @@ export function Sidebar() {
           <div className="space-y-1">
             {projects.length === 0 && !showNewProject ? (
               <p className="px-3 py-2 text-sm text-sidebar-text/50">
-                Noch keine Projekte
+                Noch keine Listen
               </p>
             ) : (
               projects.map((project) => {

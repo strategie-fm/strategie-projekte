@@ -126,9 +126,19 @@ export async function getTasks(): Promise<TaskWithRelations[]> {
 
   const taskIds = tasks.map(t => t.id);
   
+  // Load project links
   const { data: taskProjects } = await supabase
     .from("task_projects")
     .select("task_id, project_id, projects(*)")
+    .in("task_id", taskIds);
+
+  // Load subtask counts
+  const subtaskCounts = await getSubtaskCount(taskIds);
+
+  // Load labels for all tasks
+  const { data: taskLabels } = await supabase
+    .from("task_labels")
+    .select("task_id, label_id, labels(*)")
     .in("task_id", taskIds);
 
   return tasks.map((task) => {
@@ -140,12 +150,22 @@ export async function getTasks(): Promise<TaskWithRelations[]> {
         projects.push(tp.projects as unknown as Project);
       }
     });
+
+    const labelLinks = taskLabels?.filter(tl => tl.task_id === task.id) || [];
+    const labels: Label[] = [];
+    
+    labelLinks.forEach(tl => {
+      if (tl.labels && typeof tl.labels === 'object' && !Array.isArray(tl.labels)) {
+        labels.push(tl.labels as unknown as Label);
+      }
+    });
     
     return {
       ...task,
       projects,
       assignees: [],
-      labels: [],
+      labels,
+      subtaskCount: subtaskCounts[task.id] || undefined,
     };
   });
 }
@@ -184,12 +204,33 @@ export async function getTasksByProject(projectId: string): Promise<TaskWithRela
     .eq("id", projectId)
     .single();
 
-  return (tasks || []).map((task) => ({
-    ...task,
-    projects: project ? [project] : [],
-    assignees: [],
-    labels: [],
-  }));
+  // Load subtask counts
+  const subtaskCounts = await getSubtaskCount(taskIds);
+
+  // Load labels
+  const { data: taskLabels } = await supabase
+    .from("task_labels")
+    .select("task_id, label_id, labels(*)")
+    .in("task_id", taskIds);
+
+  return (tasks || []).map((task) => {
+    const labelLinks = taskLabels?.filter(tl => tl.task_id === task.id) || [];
+    const labels: Label[] = [];
+    
+    labelLinks.forEach(tl => {
+      if (tl.labels && typeof tl.labels === 'object' && !Array.isArray(tl.labels)) {
+        labels.push(tl.labels as unknown as Label);
+      }
+    });
+
+    return {
+      ...task,
+      projects: project ? [project] : [],
+      assignees: [],
+      labels,
+      subtaskCount: subtaskCounts[task.id] || undefined,
+    };
+  });
 }
 
 export async function getInboxTasks(): Promise<TaskWithRelations[]> {
@@ -223,12 +264,39 @@ export async function getInboxTasks(): Promise<TaskWithRelations[]> {
   const tasksWithProjects = new Set(taskProjects?.map(tp => tp.task_id) || []);
   const inboxTasks = tasks.filter(task => !tasksWithProjects.has(task.id));
 
-  return inboxTasks.map((task) => ({
-    ...task,
-    projects: [],
-    assignees: [],
-    labels: [],
-  }));
+  if (inboxTasks.length === 0) {
+    return [];
+  }
+
+  const inboxTaskIds = inboxTasks.map(t => t.id);
+
+  // Load subtask counts
+  const subtaskCounts = await getSubtaskCount(inboxTaskIds);
+
+  // Load labels
+  const { data: taskLabels } = await supabase
+    .from("task_labels")
+    .select("task_id, label_id, labels(*)")
+    .in("task_id", inboxTaskIds);
+
+  return inboxTasks.map((task) => {
+    const labelLinks = taskLabels?.filter(tl => tl.task_id === task.id) || [];
+    const labels: Label[] = [];
+    
+    labelLinks.forEach(tl => {
+      if (tl.labels && typeof tl.labels === 'object' && !Array.isArray(tl.labels)) {
+        labels.push(tl.labels as unknown as Label);
+      }
+    });
+
+    return {
+      ...task,
+      projects: [],
+      assignees: [],
+      labels,
+      subtaskCount: subtaskCounts[task.id] || undefined,
+    };
+  });
 }
 
 export async function createTask(task: {
@@ -345,6 +413,15 @@ export async function searchTasks(query: string): Promise<TaskWithRelations[]> {
     .select("task_id, project_id, projects(*)")
     .in("task_id", taskIds);
 
+  // Load subtask counts
+  const subtaskCounts = await getSubtaskCount(taskIds);
+
+  // Load labels
+  const { data: taskLabels } = await supabase
+    .from("task_labels")
+    .select("task_id, label_id, labels(*)")
+    .in("task_id", taskIds);
+
   return tasks.map((task) => {
     const projectLinks = taskProjects?.filter(tp => tp.task_id === task.id) || [];
     const projects: Project[] = [];
@@ -354,12 +431,22 @@ export async function searchTasks(query: string): Promise<TaskWithRelations[]> {
         projects.push(tp.projects as unknown as Project);
       }
     });
+
+    const labelLinks = taskLabels?.filter(tl => tl.task_id === task.id) || [];
+    const labels: Label[] = [];
+    
+    labelLinks.forEach(tl => {
+      if (tl.labels && typeof tl.labels === 'object' && !Array.isArray(tl.labels)) {
+        labels.push(tl.labels as unknown as Label);
+      }
+    });
     
     return {
       ...task,
       projects,
       assignees: [],
-      labels: [],
+      labels,
+      subtaskCount: subtaskCounts[task.id] || undefined,
     };
   });
 }

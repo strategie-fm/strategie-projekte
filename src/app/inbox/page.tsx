@@ -5,7 +5,7 @@ import { Sidebar } from "@/components/layout/Sidebar";
 import { Header } from "@/components/layout/Header";
 import { SortableTaskList } from "@/components/tasks/SortableTaskList";
 import { QuickAddTask } from "@/components/tasks/QuickAddTask";
-import { TaskDetailModal } from "@/components/tasks/TaskDetailModal";
+import { TaskDetailPanel } from "@/components/tasks/TaskDetailPanel";
 import { getInboxTasks } from "@/lib/database";
 import type { TaskWithRelations } from "@/types/database";
 import { Inbox as InboxIcon } from "lucide-react";
@@ -34,10 +34,14 @@ export default function InboxPage() {
         prev.map((t) => (t.id === updatedTask.id ? updatedTask : t))
       );
     }
+    if (selectedTask?.id === updatedTask.id) {
+      setSelectedTask(updatedTask);
+    }
   };
 
   const handleTaskDelete = (taskId: string) => {
     setTasks((prev) => prev.filter((t) => t.id !== taskId));
+    setSelectedTask(null);
   };
 
   const handleTaskCreated = () => {
@@ -49,7 +53,7 @@ export default function InboxPage() {
       <Sidebar />
 
       <main className="ml-sidebar-width">
-        <Header title="Inbox" subtitle="Aufgaben ohne Projekt" />
+        <Header title="Inbox" subtitle="Aufgaben ohne Aufgabenliste" />
 
         <div className="p-6">
           {loading ? (
@@ -72,7 +76,7 @@ export default function InboxPage() {
                     <InboxIcon className="w-12 h-12 text-text-muted mx-auto mb-4" />
                     <p className="text-text-muted mb-2">Deine Inbox ist leer</p>
                     <p className="text-sm text-text-muted">
-                      Aufgaben ohne Projekt landen hier
+                      Aufgaben ohne Aufgabenliste landen hier
                     </p>
                   </div>
                 )}
@@ -84,7 +88,7 @@ export default function InboxPage() {
         </div>
       </main>
 
-      <TaskDetailModal
+      <TaskDetailPanel
         task={selectedTask}
         isOpen={!!selectedTask}
         onClose={() => setSelectedTask(null)}

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { Check, GripVertical, RotateCcw } from "lucide-react";
+import { Check, GripVertical, RotateCcw, ListTodo, MessageSquare } from "lucide-react";
 import { toggleTaskComplete } from "@/lib/database";
 import type { TaskWithRelations } from "@/types/database";
 import { cn } from "@/lib/utils";
@@ -108,13 +108,16 @@ export function SortableTaskItem({
   };
 
   const dueInfo = formatDueDate(task.due_date);
+  const hasDescription = !!task.description?.trim();
+  const subtaskCount = task.subtaskCount;
+  const labels = task.labels || [];
 
   return (
     <div
       ref={setNodeRef}
       style={style}
       className={cn(
-        "flex items-center gap-2 px-2 py-3 hover:bg-primary-bg/50 transition-colors border-b border-divider last:border-b-0 group",
+        "flex items-start gap-2 px-2 py-3 hover:bg-primary-bg/50 transition-colors border-b border-divider last:border-b-0 group",
         isDragging && "opacity-50 bg-primary-bg",
         onClick && "cursor-pointer"
       )}
@@ -123,7 +126,7 @@ export function SortableTaskItem({
       <button
         {...attributes}
         {...listeners}
-        className="p-1 rounded opacity-0 group-hover:opacity-100 hover:bg-divider text-text-muted cursor-grab active:cursor-grabbing transition-opacity"
+        className="p-1 rounded opacity-0 group-hover:opacity-100 hover:bg-divider text-text-muted cursor-grab active:cursor-grabbing transition-opacity mt-0.5"
       >
         <GripVertical className="w-4 h-4" />
       </button>
@@ -133,7 +136,7 @@ export function SortableTaskItem({
         onClick={handleToggleComplete}
         disabled={isUpdating}
         className={cn(
-          "w-5 h-5 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-colors",
+          "w-5 h-5 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-colors mt-0.5",
           priorityColors[task.priority],
           isCompleted && "bg-primary border-primary",
           isUpdating && "opacity-50"
@@ -144,27 +147,42 @@ export function SortableTaskItem({
 
       {/* Content */}
       <div className="flex-1 min-w-0" onClick={handleClick}>
-        <div
-          className={cn(
-            "text-sm font-medium",
-            isCompleted ? "text-text-muted line-through" : "text-text-primary"
-          )}
-        >
-          {task.title}
+        {/* Title Row */}
+        <div className="flex items-center gap-2">
+          <span
+            className={cn(
+              "text-sm font-medium",
+              isCompleted ? "text-text-muted line-through" : "text-text-primary"
+            )}
+          >
+            {task.title}
+          </span>
         </div>
-        <div className="flex items-center gap-2 mt-0.5 text-xs text-text-muted flex-wrap">
+
+        {/* Description Preview */}
+        {hasDescription && !isCompleted && (
+          <p className="text-xs text-text-muted mt-0.5 line-clamp-1">
+            {task.description}
+          </p>
+        )}
+
+        {/* Meta Row */}
+        <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+          {/* Due Date */}
           {dueInfo && (
-            <>
-              <span
-                className={dueInfo.isOverdue && !isCompleted ? "text-error" : ""}
-              >
-                {dueInfo.text}
-              </span>
-              <span>·</span>
-            </>
+            <span
+              className={cn(
+                "text-xs",
+                dueInfo.isOverdue && !isCompleted ? "text-error font-medium" : "text-text-muted"
+              )}
+            >
+              {dueInfo.text}
+            </span>
           )}
+
+          {/* Project */}
           {showProject && task.projects && task.projects.length > 0 && (
-            <span className="flex items-center gap-1">
+            <span className="flex items-center gap-1 text-xs text-text-muted">
               <span
                 className="w-2 h-2 rounded-sm"
                 style={{ backgroundColor: task.projects[0].color }}
@@ -172,25 +190,21 @@ export function SortableTaskItem({
               {task.projects[0].name}
             </span>
           )}
+
+          {/* Subtask Counter */}
+          {subtaskCount && subtaskCount.total > 0 && (
+            <span className="flex items-center gap-1 text-xs text-text-muted">
+              <ListTodo className="w-3 h-3" />
+              {subtaskCount.completed}/{subtaskCount.total}
+            </span>
+          )}
+
+          {/* Recurring */}
           {task.is_recurring && (
-            <>
-              <span>·</span>
-              <RotateCcw className="w-3 h-3" />
-            </>
+            <RotateCcw className="w-3 h-3 text-text-muted" />
           )}
-          {task.labels && task.labels.length > 0 && (
-            <>
-              {task.labels.slice(0, 2).map((label) => (
-                <span
-                  key={label.id}
-                  className="px-1.5 py-0.5 rounded-full text-[10px] font-medium text-white"
-                  style={{ backgroundColor: label.color }}
-                >
-                  {label.name}
-                </span>
-              ))}
-            </>
-          )}
+
+          {/* Priority Badge */}
           {task.priority !== "p4" && (
             <span
               className={cn(
@@ -201,12 +215,28 @@ export function SortableTaskItem({
               {task.priority.toUpperCase()}
             </span>
           )}
+
+          {/* Labels */}
+          {labels.slice(0, 2).map((label) => (
+            <span
+              key={label.id}
+              className="px-1.5 py-0.5 rounded-full text-[10px] font-medium text-white"
+              style={{ backgroundColor: label.color }}
+            >
+              {label.name}
+            </span>
+          ))}
+          {labels.length > 2 && (
+            <span className="text-[10px] text-text-muted">
+              +{labels.length - 2}
+            </span>
+          )}
         </div>
       </div>
 
       {/* Assignees */}
       {task.assignees && task.assignees.length > 0 && (
-        <div className="flex -space-x-1">
+        <div className="flex -space-x-1 mt-0.5">
           {task.assignees.slice(0, 3).map((assignee) => (
             <div
               key={assignee.id}

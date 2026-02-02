@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Header } from "@/components/layout/Header";
 import { TaskItem } from "@/components/tasks/TaskItem";
-import { TaskDetailModal } from "@/components/tasks/TaskDetailModal";
+import { TaskDetailPanel } from "@/components/tasks/TaskDetailPanel";
 import { searchTasks } from "@/lib/database";
 import type { TaskWithRelations } from "@/types/database";
 import { Search as SearchIcon, Loader2 } from "lucide-react";
@@ -31,10 +31,14 @@ export default function SearchPage() {
     setResults((prev) =>
       prev.map((t) => (t.id === updatedTask.id ? updatedTask : t))
     );
+    if (selectedTask?.id === updatedTask.id) {
+      setSelectedTask(updatedTask);
+    }
   };
 
   const handleTaskDelete = (taskId: string) => {
     setResults((prev) => prev.filter((t) => t.id !== taskId));
+    setSelectedTask(null);
   };
 
   return (
@@ -108,8 +112,8 @@ export default function SearchPage() {
         </div>
       </main>
 
-      {/* Task Detail Modal */}
-      <TaskDetailModal
+      {/* Task Detail Panel */}
+      <TaskDetailPanel
         task={selectedTask}
         isOpen={!!selectedTask}
         onClose={() => setSelectedTask(null)}
