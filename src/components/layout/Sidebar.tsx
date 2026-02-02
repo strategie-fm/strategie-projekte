@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
+  LayoutDashboard,
   Home,
   Inbox,
   Calendar,
@@ -30,6 +31,7 @@ const MAX_WIDTH = 400;
 const DEFAULT_WIDTH = 256;
 
 const navItems = [
+  { href: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
   { href: "/", icon: Home, label: "Heute" },
   { href: "/inbox", icon: Inbox, label: "Inbox" },
   { href: "/today", icon: Calendar, label: "Heute" },
