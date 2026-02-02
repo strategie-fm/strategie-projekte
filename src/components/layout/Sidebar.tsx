@@ -151,14 +151,62 @@ export function Sidebar() {
     const handleOpenNewTask = () => setShowQuickAdd(true);
     const handleCloseModals = () => setShowQuickAdd(false);
 
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ignore if typing in input/textarea
+      if (
+        e.target instanceof HTMLInputElement ||
+        e.target instanceof HTMLTextAreaElement ||
+        e.target instanceof HTMLSelectElement
+      ) {
+        return;
+      }
+
+      // Ignore if modifier keys are pressed (except for specific combos)
+      if (e.ctrlKey || e.metaKey || e.altKey) {
+        return;
+      }
+
+      switch (e.key.toLowerCase()) {
+        case "n":
+          e.preventDefault();
+          setShowQuickAdd(true);
+          break;
+        case "d":
+          e.preventDefault();
+          router.push("/dashboard");
+          break;
+        case "h":
+          e.preventDefault();
+          router.push("/");
+          break;
+        case "i":
+          e.preventDefault();
+          router.push("/inbox");
+          break;
+        case "u":
+          e.preventDefault();
+          router.push("/upcoming");
+          break;
+        case "s":
+          e.preventDefault();
+          router.push("/search");
+          break;
+        case "escape":
+          setShowQuickAdd(false);
+          break;
+      }
+    };
+
     window.addEventListener("openNewTaskModal", handleOpenNewTask);
     window.addEventListener("closeModals", handleCloseModals);
+    window.addEventListener("keydown", handleKeyDown);
     
     return () => {
       window.removeEventListener("openNewTaskModal", handleOpenNewTask);
       window.removeEventListener("closeModals", handleCloseModals);
+      window.removeEventListener("keydown", handleKeyDown);
     };
-  }, []);
+  }, [router]);
 
   const handleCreateProject = async () => {
     if (!newProjectName.trim() || isCreating) return;
