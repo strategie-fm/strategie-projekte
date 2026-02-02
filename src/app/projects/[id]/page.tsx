@@ -5,12 +5,14 @@ import { useParams, useRouter } from "next/navigation";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Header } from "@/components/layout/Header";
 import { SortableTaskList } from "@/components/tasks/SortableTaskList";
+import { SortableTaskItem } from "@/components/tasks/SortableTaskItem";
 import { QuickAddTask } from "@/components/tasks/QuickAddTask";
 import { TaskDetailModal } from "@/components/tasks/TaskDetailModal";
 import { ProjectSettingsModal } from "@/components/projects/ProjectSettingsModal";
 import { getProject, getTasksByProject } from "@/lib/database";
 import type { Project, TaskWithRelations } from "@/types/database";
-import { FolderOpen, Settings } from "lucide-react";
+import { FolderOpen, Settings, Check } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 export default function ProjectPage() {
   const params = useParams();
@@ -22,6 +24,7 @@ export default function ProjectPage() {
   const [loading, setLoading] = useState(true);
   const [selectedTask, setSelectedTask] = useState<TaskWithRelations | null>(null);
   const [showSettings, setShowSettings] = useState(false);
+  const [showCompleted, setShowCompleted] = useState(false);
 
   const loadData = async () => {
     setLoading(true);
@@ -32,7 +35,7 @@ export default function ProjectPage() {
     ]);
 
     setProject(projectData);
-    setTasks(tasksData.filter((t) => t.status !== "done"));
+    setTasks(tasksData);
     setLoading(false);
   };
 
@@ -43,13 +46,9 @@ export default function ProjectPage() {
   }, [projectId]);
 
   const handleTaskUpdate = (updatedTask: TaskWithRelations) => {
-    if (updatedTask.status === "done") {
-      setTasks((prev) => prev.filter((t) => t.id !== updatedTask.id));
-    } else {
-      setTasks((prev) =>
-        prev.map((t) => (t.id === updatedTask.id ? updatedTask : t))
-      );
-    }
+    setTasks((prev) =>
+      prev.map((t) => (t.id === updatedTask.id ? updatedTask : t))
+    );
   };
 
   const handleTaskDelete = (taskId: string) => {
@@ -67,6 +66,9 @@ export default function ProjectPage() {
   const handleProjectDelete = () => {
     router.push("/");
   };
+
+  const activeTasks = tasks.filter((t) => t.status !== "done");
+  const completedTasks = tasks.filter((t) => t.status === "done");
 
   if (loading) {
     return (
@@ -112,36 +114,108 @@ export default function ProjectPage() {
                 className="w-3 h-3 rounded"
                 style={{ backgroundColor: project.color }}
               />
-              Aufgaben ({tasks.length})
+              Aufgaben ({activeTasks.length})
             </h2>
-            <button
-              onClick={() => setShowSettings(true)}
-              className="flex items-center gap-2 px-3 py-1.5 text-sm text-text-muted hover:text-text-primary hover:bg-divider rounded-lg transition-colors"
-            >
-              <Settings className="w-4 h-4" />
-              Einstellungen
-            </button>
+            <div className="flex items-center gap-2">
+              {completedTasks.length > 0 && (
+                <button
+                  onClick={() => setShowCompleted(!showCompleted)}
+                  className={cn(
+                    "flex items-center gap-2 px-3 py-1.5 text-sm rounded-lg transition-colors",
+                    showCompleted
+                      ? "bg-primary-surface text-primary"
+                      : "text-text-muted hover:text-text-primary hover:bg-divider"
+                  )}
+                >
+                  <Check className="w-4 h-4" />
+                  Erledigte ({completedTasks.length})
+                </button>
+              )}
+              <button
+                onClick={() => setShowSettings(true)}
+                className="flex items-center gap-2 px-3 py-1.5 text-sm text-text-muted hover:text-text-primary hover:bg-divider rounded-lg transition-colors"
+                title="Einstellungen"
+              >
+                <Settings className="w-4 h-4" />
+              </button>
+            </div>
           </div>
 
           <section className="mb-6">
-            {tasks.length > 0 ? (
-              <SortableTaskList
-                tasks={tasks}
-                onTasksReorder={setTasks}
-                onTaskUpdate={handleTaskUpdate}
-                onTaskClick={setSelectedTask}
-                showProject={false}
-              />
+            {activeTasks.length > 0 ? (
+              <>
+                {/* Active Tasks */}
+                <SortableTaskList
+                  tasks={activeTasks}
+                  onTasksReorder={(reordered) => {
+                    setTasks([...reordered, ...completedTasks]);
+                  }}
+                  onTaskUpdate={handleTaskUpdate}
+                  onTaskClick={setSelectedTask}
+                  showProject={false}
+                />
+
+                {/* Completed Tasks */}
+                {showCompleted && completedTasks.length > 0 && (
+                  <div className="mt-4">
+                    <h3 className="text-xs font-medium text-text-muted mb-2 px-2">
+                      Erledigt
+                    </h3>
+                    <div className="bg-surface rounded-xl shadow-sm border border-border opacity-60">
+                      {completedTasks.map((task) => (
+                        <SortableTaskItem
+                          key={task.id}
+                          task={task}
+                          onUpdate={handleTaskUpdate}
+                          onClick={setSelectedTask}
+                          showProject={false}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </>
             ) : (
-              <div className="bg-surface rounded-xl shadow-sm border border-border p-12 text-center">
-                <FolderOpen className="w-12 h-12 text-text-muted mx-auto mb-4" />
-                <p className="text-text-muted mb-2">
-                  Keine Aufgaben in diesem Projekt
-                </p>
-                <p className="text-sm text-text-muted">
-                  Füge deine erste Aufgabe hinzu
-                </p>
-              </div>
+              <>
+                {/* Empty State or only completed */}
+                {completedTasks.length > 0 ? (
+                  <>
+                    <div className="bg-surface rounded-xl shadow-sm border border-border p-8 text-center mb-4">
+                      <p className="text-text-muted">
+                        Alle Aufgaben erledigt! 🎉
+                      </p>
+                    </div>
+                    {showCompleted && (
+                      <div className="mt-4">
+                        <h3 className="text-xs font-medium text-text-muted mb-2 px-2">
+                          Erledigt
+                        </h3>
+                        <div className="bg-surface rounded-xl shadow-sm border border-border opacity-60">
+                          {completedTasks.map((task) => (
+                            <SortableTaskItem
+                              key={task.id}
+                              task={task}
+                              onUpdate={handleTaskUpdate}
+                              onClick={setSelectedTask}
+                              showProject={false}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <div className="bg-surface rounded-xl shadow-sm border border-border p-12 text-center">
+                    <FolderOpen className="w-12 h-12 text-text-muted mx-auto mb-4" />
+                    <p className="text-text-muted mb-2">
+                      Keine Aufgaben in diesem Projekt
+                    </p>
+                    <p className="text-sm text-text-muted">
+                      Füge deine erste Aufgabe hinzu
+                    </p>
+                  </div>
+                )}
+              </>
             )}
           </section>
 
