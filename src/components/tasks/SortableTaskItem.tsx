@@ -41,14 +41,13 @@ export function SortableTaskItem({
 
   const handleToggleComplete = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (isUpdating) return;
-    setIsUpdating(true);
-
-    const updated = await toggleTaskComplete(task.id, !isCompleted);
-    if (updated && onUpdate) {
+    const newStatus = task.status === "done" ? "todo" : "done";
+    const updated = await toggleTaskComplete(task.id, newStatus === "done");
+    if (updated) {
       onUpdate({ ...task, ...updated });
+      // Notify sidebar to update progress
+      window.dispatchEvent(new Event("taskUpdated"));
     }
-    setIsUpdating(false);
   };
 
   const handleClick = () => {

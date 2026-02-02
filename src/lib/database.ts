@@ -807,3 +807,89 @@ export async function moveTaskToSection(taskId: string, sectionId: string | null
 
   return true;
 }
+
+export async function getProjectProgress(projectId: string): Promise<{ total: number; completed: number }> {
+  const { data: taskProjectLinks } = await supabase
+    .from("task_projects")
+    .select("task_id")
+    .eq("project_id", projectId);
+
+  if (!taskProjectLinks || taskProjectLinks.length === 0) {
+    return { total: 0, completed: 0 };
+  }
+
+  const taskIds = taskProjectLinks.map(tp => tp.task_id);
+
+  const { data: tasks, error } = await supabase
+    .from("tasks")
+    .select("status")
+    .in("id", taskIds)
+    .is("parent_task_id", null)
+    .neq("status", "archived");
+
+  if (error || !tasks) {
+    return { total: 0, completed: 0 };
+  }
+
+  return {
+    total: tasks.length,
+    completed: tasks.filter(t => t.status === "done").length,
+  };
+}
+
+export async function getAllProjectsProgress(): Promise<Record<string, { total: number; completed: number }>> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return {};
+
+  // Get all projects
+  const { data: projects } = await supabase
+    .from("projects")
+    .select("id")
+    .eq("created_by", user.id)
+    .is("archived_at", null);
+
+  if (!projects || projects.length === 0) return {};
+
+  const projectIds = projects.map(p => p.id);
+
+  // Get all task-project links
+  const { data: taskProjectLinks } = await supabase
+    .from("task_projects")
+    .select("task_id, project_id")
+    .in("project_id", projectIds);
+
+  if (!taskProjectLinks || taskProjectLinks.length === 0) {
+    return projectIds.reduce((acc, id) => ({ ...acc, [id]: { total: 0, completed: 0 } }), {});
+  }
+
+  const taskIds = [...new Set(taskProjectLinks.map(tp => tp.task_id))];
+
+  // Get task statuses
+  const { data: tasks } = await supabase
+    .from("tasks")
+    .select("id, status")
+    .in("id", taskIds)
+    .is("parent_task_id", null)
+    .neq("status", "archived");
+
+  const taskStatusMap = new Map(tasks?.map(t => [t.id, t.status]) || []);
+
+  // Calculate progress per project
+  const progress: Record<string, { total: number; completed: number }> = {};
+  
+  projectIds.forEach(projectId => {
+    progress[projectId] = { total: 0, completed: 0 };
+  });
+
+  taskProjectLinks.forEach(link => {
+    const status = taskStatusMap.get(link.task_id);
+    if (status) {
+      progress[link.project_id].total++;
+      if (status === "done") {
+        progress[link.project_id].completed++;
+      }
+    }
+  });
+
+  return progress;
+}
