@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Header } from "@/components/layout/Header";
-import { TaskItem } from "@/components/tasks/TaskItem";
+import { SortableTaskItem } from "@/components/tasks/SortableTaskItem";
 import { TaskDetailPanel } from "@/components/tasks/TaskDetailPanel";
 import { QuickAddTask } from "@/components/tasks/QuickAddTask";
 import { getTasks, getLabels } from "@/lib/database";
@@ -159,7 +159,7 @@ export default function UpcomingPage() {
                       </h2>
                       <div className="bg-surface rounded-xl shadow-sm border border-border">
                         {group.tasks.map((task) => (
-                          <TaskItem
+                          <SortableTaskItem
                             key={task.id}
                             task={task}
                             onUpdate={handleTaskUpdate}
