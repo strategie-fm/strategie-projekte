@@ -107,7 +107,6 @@ export async function getTasks(): Promise<TaskWithRelations[]> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return [];
 
-  // Erst nur die Tasks laden
   const { data: tasks, error } = await supabase
     .from("tasks")
     .select("*")
@@ -125,7 +124,6 @@ export async function getTasks(): Promise<TaskWithRelations[]> {
     return [];
   }
 
-  // Dann die Projekt-Verknüpfungen laden
   const taskIds = tasks.map(t => t.id);
   
   const { data: taskProjects } = await supabase
@@ -133,14 +131,19 @@ export async function getTasks(): Promise<TaskWithRelations[]> {
     .select("task_id, project_id, projects(*)")
     .in("task_id", taskIds);
 
-  // Tasks mit Projekten kombinieren
   return tasks.map((task) => {
     const projectLinks = taskProjects?.filter(tp => tp.task_id === task.id) || [];
-    const projects = projectLinks.map(tp => tp.projects).filter(Boolean);
+    const projects: Project[] = [];
+    
+    projectLinks.forEach(tp => {
+      if (tp.projects && typeof tp.projects === 'object' && !Array.isArray(tp.projects)) {
+        projects.push(tp.projects as unknown as Project);
+      }
+    });
     
     return {
       ...task,
-      projects: projects as Project[],
+      projects,
       assignees: [],
       labels: [],
     };
@@ -151,7 +154,6 @@ export async function getTasksByProject(projectId: string): Promise<TaskWithRela
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return [];
 
-  // Erst die Task-IDs für dieses Projekt holen
   const { data: taskProjectLinks, error: linkError } = await supabase
     .from("task_projects")
     .select("task_id")
@@ -163,7 +165,6 @@ export async function getTasksByProject(projectId: string): Promise<TaskWithRela
 
   const taskIds = taskProjectLinks.map(tp => tp.task_id);
 
-  // Dann die Tasks laden
   const { data: tasks, error } = await supabase
     .from("tasks")
     .select("*")
@@ -177,7 +178,6 @@ export async function getTasksByProject(projectId: string): Promise<TaskWithRela
     return [];
   }
 
-  // Projekt-Info laden
   const { data: project } = await supabase
     .from("projects")
     .select("*")
@@ -196,7 +196,6 @@ export async function getInboxTasks(): Promise<TaskWithRelations[]> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return [];
 
-  // Alle Tasks des Users laden
   const { data: tasks, error } = await supabase
     .from("tasks")
     .select("*")
@@ -214,7 +213,6 @@ export async function getInboxTasks(): Promise<TaskWithRelations[]> {
     return [];
   }
 
-  // Alle Task-Projekt-Verknüpfungen laden
   const taskIds = tasks.map(t => t.id);
   
   const { data: taskProjects } = await supabase
@@ -222,7 +220,6 @@ export async function getInboxTasks(): Promise<TaskWithRelations[]> {
     .select("task_id")
     .in("task_id", taskIds);
 
-  // Tasks filtern, die KEINE Projekt-Verknüpfung haben
   const tasksWithProjects = new Set(taskProjects?.map(tp => tp.task_id) || []);
   const inboxTasks = tasks.filter(task => !tasksWithProjects.has(task.id));
 
@@ -245,7 +242,6 @@ export async function createTask(task: {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return null;
 
-  // Create the task
   const { data: newTask, error: taskError } = await supabase
     .from("tasks")
     .insert({
@@ -264,7 +260,6 @@ export async function createTask(task: {
     return null;
   }
 
-  // If project_id provided, link to project
   if (task.project_id && newTask) {
     const { error: linkError } = await supabase
       .from("task_projects")
@@ -343,7 +338,6 @@ export async function searchTasks(query: string): Promise<TaskWithRelations[]> {
     return [];
   }
 
-  // Load project links
   const taskIds = tasks.map(t => t.id);
   
   const { data: taskProjects } = await supabase
@@ -353,11 +347,17 @@ export async function searchTasks(query: string): Promise<TaskWithRelations[]> {
 
   return tasks.map((task) => {
     const projectLinks = taskProjects?.filter(tp => tp.task_id === task.id) || [];
-    const projects = projectLinks.map(tp => tp.projects).filter(Boolean);
+    const projects: Project[] = [];
+    
+    projectLinks.forEach(tp => {
+      if (tp.projects && typeof tp.projects === 'object' && !Array.isArray(tp.projects)) {
+        projects.push(tp.projects as unknown as Project);
+      }
+    });
     
     return {
       ...task,
-      projects: projects as Project[],
+      projects,
       assignees: [],
       labels: [],
     };
@@ -542,7 +542,14 @@ export async function getTaskLabels(taskId: string): Promise<Label[]> {
     return [];
   }
 
-  return (data || []).map(tl => tl.labels).filter(Boolean) as Label[];
+  const labels: Label[] = [];
+  (data || []).forEach(tl => {
+    if (tl.labels && typeof tl.labels === 'object' && !Array.isArray(tl.labels)) {
+      labels.push(tl.labels as unknown as Label);
+    }
+  });
+  
+  return labels;
 }
 
 // ============================================
