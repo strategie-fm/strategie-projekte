@@ -38,6 +38,20 @@ export function Sidebar() {
   const [isCreating, setIsCreating] = useState(false);
   const [showQuickAdd, setShowQuickAdd] = useState(false);
 
+  // Listen for global new task event
+  useEffect(() => {
+    const handleNewTask = () => setShowQuickAdd(true);
+    window.addEventListener("openNewTaskModal", handleNewTask);
+    return () => window.removeEventListener("openNewTaskModal", handleNewTask);
+  }, []);
+
+  // Listen for close modals event
+  useEffect(() => {
+    const handleClose = () => setShowQuickAdd(false);
+    window.addEventListener("closeModals", handleClose);
+    return () => window.removeEventListener("closeModals", handleClose);
+  }, []);
+
   useEffect(() => {
     // Get initial user
     supabase.auth.getUser().then(({ data: { user } }) => {
@@ -256,7 +270,14 @@ export function Sidebar() {
 
       {/* Quick Add Modal */}
       {showQuickAdd && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          onKeyDown={(e) => {
+            if (e.key === "Escape") {
+              setShowQuickAdd(false);
+            }
+          }}
+        >
           <div 
             className="absolute inset-0 bg-black/50"
             onClick={() => setShowQuickAdd(false)}
@@ -266,7 +287,6 @@ export function Sidebar() {
               onClose={() => setShowQuickAdd(false)}
               onTaskCreated={() => {
                 setShowQuickAdd(false);
-                // Optional: Seite neu laden
                 window.location.reload();
               }}
             />

@@ -67,6 +67,10 @@ export interface TaskWithRelations extends Task {
   assignees?: Profile[];
   labels?: Label[];
   subtasks?: Task[];
+  subtaskCount?: {
+    total: number;
+    completed: number;
+  };
 }
 
 export interface Label {

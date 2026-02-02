@@ -1,5 +1,5 @@
 import { supabase } from "./supabase";
-import type { Project, Task, TaskWithRelations } from "@/types/database";
+import type { Project, Task, TaskWithRelations, Label, Comment } from "@/types/database";
 
 // ============================================
 // PROJECTS
@@ -362,4 +362,252 @@ export async function searchTasks(query: string): Promise<TaskWithRelations[]> {
       labels: [],
     };
   });
+}
+
+// ============================================
+// SUBTASKS
+// ============================================
+
+export async function getSubtasks(parentTaskId: string): Promise<Task[]> {
+  const { data, error } = await supabase
+    .from("tasks")
+    .select("*")
+    .eq("parent_task_id", parentTaskId)
+    .neq("status", "archived")
+    .order("position", { ascending: true });
+
+  if (error) {
+    console.error("Error fetching subtasks:", error);
+    return [];
+  }
+
+  return data || [];
+}
+
+export async function createSubtask(
+  parentTaskId: string,
+  title: string
+): Promise<Task | null> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return null;
+
+  const { data, error } = await supabase
+    .from("tasks")
+    .insert({
+      title,
+      parent_task_id: parentTaskId,
+      created_by: user.id,
+      priority: "p4",
+      status: "todo",
+    })
+    .select()
+    .single();
+
+  if (error) {
+    console.error("Error creating subtask:", error);
+    return null;
+  }
+
+  return data;
+}
+
+export async function getSubtaskCount(taskIds: string[]): Promise<Record<string, { total: number; completed: number }>> {
+  if (taskIds.length === 0) return {};
+
+  const { data, error } = await supabase
+    .from("tasks")
+    .select("parent_task_id, status")
+    .in("parent_task_id", taskIds)
+    .neq("status", "archived");
+
+  if (error) {
+    console.error("Error fetching subtask counts:", error);
+    return {};
+  }
+
+  const counts: Record<string, { total: number; completed: number }> = {};
+  
+  (data || []).forEach((subtask) => {
+    if (!subtask.parent_task_id) return;
+    
+    if (!counts[subtask.parent_task_id]) {
+      counts[subtask.parent_task_id] = { total: 0, completed: 0 };
+    }
+    counts[subtask.parent_task_id].total++;
+    if (subtask.status === "done") {
+      counts[subtask.parent_task_id].completed++;
+    }
+  });
+
+  return counts;
+}
+
+// ============================================
+// LABELS
+// ============================================
+
+export async function getLabels(): Promise<Label[]> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return [];
+
+  const { data, error } = await supabase
+    .from("labels")
+    .select("*")
+    .eq("created_by", user.id)
+    .order("name", { ascending: true });
+
+  if (error) {
+    console.error("Error fetching labels:", error);
+    return [];
+  }
+
+  return data || [];
+}
+
+export async function createLabel(label: {
+  name: string;
+  color?: string;
+}): Promise<Label | null> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return null;
+
+  const { data, error } = await supabase
+    .from("labels")
+    .insert({
+      name: label.name,
+      color: label.color || "#6b7280",
+      created_by: user.id,
+    })
+    .select()
+    .single();
+
+  if (error) {
+    console.error("Error creating label:", error);
+    return null;
+  }
+
+  return data;
+}
+
+export async function deleteLabel(id: string): Promise<boolean> {
+  const { error } = await supabase
+    .from("labels")
+    .delete()
+    .eq("id", id);
+
+  if (error) {
+    console.error("Error deleting label:", error);
+    return false;
+  }
+
+  return true;
+}
+
+export async function addLabelToTask(taskId: string, labelId: string): Promise<boolean> {
+  const { error } = await supabase
+    .from("task_labels")
+    .insert({ task_id: taskId, label_id: labelId });
+
+  if (error) {
+    console.error("Error adding label to task:", error);
+    return false;
+  }
+
+  return true;
+}
+
+export async function removeLabelFromTask(taskId: string, labelId: string): Promise<boolean> {
+  const { error } = await supabase
+    .from("task_labels")
+    .delete()
+    .eq("task_id", taskId)
+    .eq("label_id", labelId);
+
+  if (error) {
+    console.error("Error removing label from task:", error);
+    return false;
+  }
+
+  return true;
+}
+
+export async function getTaskLabels(taskId: string): Promise<Label[]> {
+  const { data, error } = await supabase
+    .from("task_labels")
+    .select("label_id, labels(*)")
+    .eq("task_id", taskId);
+
+  if (error) {
+    console.error("Error fetching task labels:", error);
+    return [];
+  }
+
+  return (data || []).map(tl => tl.labels).filter(Boolean) as Label[];
+}
+
+// ============================================
+// COMMENTS
+// ============================================
+
+export async function getComments(taskId: string): Promise<Comment[]> {
+  const { data, error } = await supabase
+    .from("comments")
+    .select(`
+      *,
+      profiles:user_id (id, email, full_name, avatar_url)
+    `)
+    .eq("task_id", taskId)
+    .order("created_at", { ascending: true });
+
+  if (error) {
+    console.error("Error fetching comments:", error);
+    return [];
+  }
+
+  return (data || []).map(comment => ({
+    ...comment,
+    user: comment.profiles,
+  })) as Comment[];
+}
+
+export async function createComment(taskId: string, content: string): Promise<Comment | null> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return null;
+
+  const { data, error } = await supabase
+    .from("comments")
+    .insert({
+      task_id: taskId,
+      user_id: user.id,
+      content,
+    })
+    .select(`
+      *,
+      profiles:user_id (id, email, full_name, avatar_url)
+    `)
+    .single();
+
+  if (error) {
+    console.error("Error creating comment:", error);
+    return null;
+  }
+
+  return {
+    ...data,
+    user: data.profiles,
+  } as Comment;
+}
+
+export async function deleteComment(id: string): Promise<boolean> {
+  const { error } = await supabase
+    .from("comments")
+    .delete()
+    .eq("id", id);
+
+  if (error) {
+    console.error("Error deleting comment:", error);
+    return false;
+  }
+
+  return true;
 }

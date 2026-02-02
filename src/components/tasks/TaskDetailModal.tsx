@@ -14,6 +14,9 @@ import {
 import { updateTask, deleteTask, getProjects } from "@/lib/database";
 import type { TaskWithRelations, Project, Task } from "@/types/database";
 import { cn } from "@/lib/utils";
+import { SubtaskList } from "./SubtaskList";
+import { LabelSelector } from "./LabelSelector";
+import { CommentList } from "./CommentList";
 
 interface TaskDetailModalProps {
   task: TaskWithRelations | null;
@@ -160,6 +163,31 @@ export function TaskDetailModal({
             rows={4}
             placeholder="Füge eine Beschreibung hinzu..."
           />
+        </div>
+        
+        {/* Subtasks */}
+        <div className="mb-6 pt-4 border-t border-border">
+        <SubtaskList 
+            parentTaskId={task.id} 
+            onSubtaskChange={() => {
+            // Optional: Task neu laden für aktualisierten Counter
+            }}
+        />
+        </div>
+
+        {/* Labels */}
+        <div className="mb-6">
+        <LabelSelector 
+            taskId={task.id}
+            onLabelsChange={(labels) => {
+            onUpdate({ ...task, labels });
+            }}
+        />
+        </div>
+
+        {/* Comments */}
+        <div className="mb-6 pt-4 border-t border-border">
+        <CommentList taskId={task.id} />
         </div>
 
         {/* Delete Confirmation */}

@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { AuthProvider } from "@/components/providers/AuthProvider";
+import { KeyboardShortcutsProvider } from "@/components/providers/KeyboardShortcuts";
+import { KeyboardShortcutsHelp } from "@/components/ui/KeyboardShortcutsHelp";
 
 export const metadata: Metadata = {
   title: "STRATEGIE - Projekte & Aufgaben",
@@ -15,7 +17,12 @@ export default function RootLayout({
   return (
     <html lang="de">
       <body>
-        <AuthProvider>{children}</AuthProvider>
+        <AuthProvider>
+          <KeyboardShortcutsProvider>
+            {children}
+            <KeyboardShortcutsHelp />
+          </KeyboardShortcutsProvider>
+        </AuthProvider>
       </body>
     </html>
   );
