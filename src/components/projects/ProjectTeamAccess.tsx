@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { getTeams, getProjectTeamAccess, grantProjectAccess, updateProjectAccess, revokeProjectAccess } from "@/lib/database";
 import type { Team, ProjectTeamAccess as ProjectTeamAccessType, AccessLevel } from "@/types/database";
 import { Users, Plus, X, Shield, Edit, Eye } from "lucide-react";
@@ -24,11 +24,7 @@ export function ProjectTeamAccess({ projectId }: ProjectTeamAccessProps) {
   const [selectedTeamId, setSelectedTeamId] = useState<string>("");
   const [selectedAccessLevel, setSelectedAccessLevel] = useState<AccessLevel>("view");
 
-  useEffect(() => {
-    loadData();
-  }, [projectId]);
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     setLoading(true);
     const [teamsData, accessData] = await Promise.all([
       getTeams(),
@@ -37,7 +33,11 @@ export function ProjectTeamAccess({ projectId }: ProjectTeamAccessProps) {
     setTeams(teamsData);
     setProjectAccess(accessData);
     setLoading(false);
-  };
+  }, [projectId]);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
   const handleGrantAccess = async () => {
     if (!selectedTeamId) return;
@@ -165,7 +165,7 @@ export function ProjectTeamAccess({ projectId }: ProjectTeamAccessProps) {
             </button>
           ) : (
             <p className="text-sm text-text-muted">
-              Erstelle zuerst ein Team unter "Teams"
+              Erstelle zuerst ein Team unter &quot;Teams&quot;
             </p>
           )}
         </div>
