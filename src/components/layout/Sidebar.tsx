@@ -6,6 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard,
   Home,
+  User,
   Inbox,
   Calendar,
   CalendarDays,
@@ -33,6 +34,7 @@ const DEFAULT_WIDTH = 256;
 const navItems = [
   { href: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
   { href: "/", icon: Home, label: "Heute" },
+  { href: "/my-tasks", icon: User, label: "Meine Aufgaben" },
   { href: "/inbox", icon: Inbox, label: "Inbox" },
   { href: "/today", icon: Calendar, label: "Heute" },
   { href: "/upcoming", icon: CalendarDays, label: "Anstehend" },

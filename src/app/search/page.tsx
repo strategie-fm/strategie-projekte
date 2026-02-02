@@ -5,8 +5,8 @@ import { Sidebar } from "@/components/layout/Sidebar";
 import { Header } from "@/components/layout/Header";
 import { SortableTaskItem } from "@/components/tasks/SortableTaskItem";
 import { TaskDetailPanel } from "@/components/tasks/TaskDetailPanel";
-import { getTasks, getLabels } from "@/lib/database";
-import type { TaskWithRelations, Label } from "@/types/database";
+import { getTasks, getLabels, getProfiles, getTaskAssignees } from "@/lib/database";
+import type { TaskWithRelations, Label, Profile } from "@/types/database";
 import { Search as SearchIcon, X, Filter } from "lucide-react";
 import { filterTasks, TaskFilterState } from "@/components/filters/TaskFilters";
 import { cn } from "@/lib/utils";
@@ -27,25 +27,41 @@ const statuses = [
 export default function SearchPage() {
   const [query, setQuery] = useState("");
   const [allTasks, setAllTasks] = useState<TaskWithRelations[]>([]);
+  const [taskAssigneeMap, setTaskAssigneeMap] = useState<Record<string, string[]>>({});
   const [loading, setLoading] = useState(true);
   const [selectedTask, setSelectedTask] = useState<TaskWithRelations | null>(null);
   const [labels, setLabels] = useState<Label[]>([]);
+  const [profiles, setProfiles] = useState<Profile[]>([]);
+  const [selectedAssignees, setSelectedAssignees] = useState<string[]>([]);
   const [filters, setFilters] = useState<TaskFilterState>({
     priorities: [],
     labels: [],
-    status: [],
+    status: ["todo", "in_progress"],
   });
 
-  // Load all tasks and labels on mount
+  // Load all tasks, labels, and profiles on mount
   useEffect(() => {
     const loadData = async () => {
       setLoading(true);
-      const [tasksData, labelsData] = await Promise.all([
+      const [tasksData, labelsData, profilesData] = await Promise.all([
         getTasks(),
         getLabels(),
+        getProfiles(),
       ]);
       setAllTasks(tasksData);
       setLabels(labelsData);
+      setProfiles(profilesData);
+
+      // Load assignees for all tasks
+      const assigneeMap: Record<string, string[]> = {};
+      await Promise.all(
+        tasksData.map(async (task) => {
+          const assignees = await getTaskAssignees(task.id);
+          assigneeMap[task.id] = assignees.map((a) => a.user_id);
+        })
+      );
+      setTaskAssigneeMap(assigneeMap);
+
       setLoading(false);
     };
     loadData();
@@ -92,9 +108,18 @@ export default function SearchPage() {
     }));
   };
 
+  const toggleAssignee = (userId: string) => {
+    setSelectedAssignees((prev) =>
+      prev.includes(userId)
+        ? prev.filter((id) => id !== userId)
+        : [...prev, userId]
+    );
+  };
+
   const clearAll = () => {
     setQuery("");
     setFilters({ priorities: [], labels: [], status: [] });
+    setSelectedAssignees([]);
   };
 
   // Filter by search query
@@ -106,11 +131,31 @@ export default function SearchPage() {
       )
     : allTasks;
 
-  // Then apply additional filters
-  const filteredResults = filterTasks(searchFiltered, filters);
+  // Apply priority/status/label filters
+  const filteredByFilters = filterTasks(searchFiltered, filters);
+
+  // Apply assignee filter
+  const filteredResults = selectedAssignees.length > 0
+    ? filteredByFilters.filter((task) => {
+        const taskAssignees = taskAssigneeMap[task.id] || [];
+        
+        // Check for "unassigned" filter
+        if (selectedAssignees.includes("unassigned") && taskAssignees.length === 0) {
+          return true;
+        }
+        
+        // Check for specific assignees
+        const specificAssignees = selectedAssignees.filter((id) => id !== "unassigned");
+        if (specificAssignees.length > 0 && specificAssignees.some((userId) => taskAssignees.includes(userId))) {
+          return true;
+        }
+        
+        return false;
+      })
+    : filteredByFilters;
 
   const activeFilterCount =
-    filters.priorities.length + filters.labels.length + filters.status.length;
+    filters.priorities.length + filters.labels.length + filters.status.length + selectedAssignees.length;
   const hasActiveSearch = query.trim().length > 0 || activeFilterCount > 0;
 
   return (
@@ -146,7 +191,7 @@ export default function SearchPage() {
 
             {/* Filter Sections */}
             <div className="space-y-4">
-              {/* Priority & Status Row */}
+              {/* Priority, Status & Person Row */}
               <div className="flex flex-wrap gap-6">
                 {/* Priority Filter */}
                 <div className="flex items-center gap-3">
@@ -195,6 +240,79 @@ export default function SearchPage() {
                     ))}
                   </div>
                 </div>
+
+                {/* Assignee Filter */}
+                {profiles.length > 0 && (
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs font-medium text-text-muted">Person</span>
+                    <div className="flex flex-wrap gap-2">
+                      {/* Unassigned Option */}
+                      <button
+                        onClick={() => toggleAssignee("unassigned")}
+                        className={cn(
+                          "flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors",
+                          selectedAssignees.includes("unassigned")
+                            ? "bg-primary text-white"
+                            : "bg-background border border-border text-text-secondary hover:border-primary"
+                        )}
+                      >
+                        <div
+                          className={cn(
+                            "w-5 h-5 rounded-full text-[10px] font-medium flex items-center justify-center border-2 border-dashed",
+                            selectedAssignees.includes("unassigned")
+                              ? "border-white/50 text-white"
+                              : "border-text-muted text-text-muted"
+                          )}
+                        >
+                          ?
+                        </div>
+                        Nicht zugewiesen
+                      </button>
+
+                      {profiles.map((profile) => {
+                        const isSelected = selectedAssignees.includes(profile.id);
+                        const displayName = profile.full_name || profile.email.split("@")[0];
+                        const initials = (profile.full_name || profile.email)
+                          .split(" ")
+                          .map((n) => n[0])
+                          .join("")
+                          .toUpperCase()
+                          .slice(0, 2);
+
+                        return (
+                          <button
+                            key={profile.id}
+                            onClick={() => toggleAssignee(profile.id)}
+                            className={cn(
+                              "flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors",
+                              isSelected
+                                ? "bg-primary text-white"
+                                : "bg-background border border-border text-text-secondary hover:border-primary"
+                            )}
+                          >
+                            {profile.avatar_url ? (
+                              <img
+                                src={profile.avatar_url}
+                                alt={displayName}
+                                className="w-5 h-5 rounded-full"
+                              />
+                            ) : (
+                              <div
+                                className={cn(
+                                  "w-5 h-5 rounded-full text-[10px] font-medium flex items-center justify-center",
+                                  isSelected ? "bg-white/20 text-white" : "bg-primary text-white"
+                                )}
+                              >
+                                {initials}
+                              </div>
+                            )}
+                            {displayName}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Labels Filter */}

@@ -4,8 +4,8 @@ import { useEffect, useState } from "react";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Header } from "@/components/layout/Header";
 import { DonutChart, DonutLegend } from "@/components/charts/DonutChart";
-import { getProjects, getTasks } from "@/lib/database";
-import type { Project, TaskWithRelations } from "@/types/database";
+import { getProjects, getTasks, getProfiles, getTaskAssignees } from "@/lib/database";
+import type { Project, TaskWithRelations, Profile } from "@/types/database";
 import { LayoutDashboard, CheckCircle2, Clock, AlertCircle } from "lucide-react";
 import Link from "next/link";
 
@@ -130,46 +130,86 @@ export default function DashboardPage() {
   const [projects, setProjects] = useState<ProjectWithStats[]>([]);
   const [allTasks, setAllTasks] = useState<TaskWithRelations[]>([]);
   const [loading, setLoading] = useState(true);
-
-  const loadData = async () => {
-    setLoading(true);
-
-    const [projectsData, tasksData] = await Promise.all([
-      getProjects(),
-      getTasks(),
-    ]);
-
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    // Calculate stats per project
-    const projectsWithStats: ProjectWithStats[] = projectsData.map((project) => {
-      const projectTasks = tasksData.filter((t) =>
-        t.projects?.some((p) => p.id === project.id)
-      );
-
-      const overdue = projectTasks.filter((t) => {
-        if (t.status === "done" || !t.due_date) return false;
-        const dueDate = new Date(t.due_date);
-        dueDate.setHours(0, 0, 0, 0);
-        return dueDate < today;
-      });
-
-      return {
-        ...project,
-        totalTasks: projectTasks.length,
-        completedTasks: projectTasks.filter((t) => t.status === "done").length,
-        inProgressTasks: projectTasks.filter((t) => t.status === "in_progress").length,
-        overdueTasks: overdue.length,
-      };
-    });
-
-    setProjects(projectsWithStats);
-    setAllTasks(tasksData);
-    setLoading(false);
-  };
+  const [teamStats, setTeamStats] = useState<{
+    profile: Profile;
+    total: number;
+    completed: number;
+    inProgress: number;
+    overdue: number;
+  }[]>([]);
 
   useEffect(() => {
+    const loadData = async () => {
+      setLoading(true);
+
+      const [projectsData, tasksData, profilesData] = await Promise.all([
+        getProjects(),
+        getTasks(),
+        getProfiles(),
+      ]);
+
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      // Calculate stats per project
+      const projectsWithStats: ProjectWithStats[] = projectsData.map((project) => {
+        const projectTasks = tasksData.filter((t) =>
+          t.projects?.some((p) => p.id === project.id)
+        );
+
+        const overdue = projectTasks.filter((t) => {
+          if (t.status === "done" || !t.due_date) return false;
+          const dueDate = new Date(t.due_date);
+          dueDate.setHours(0, 0, 0, 0);
+          return dueDate < today;
+        });
+
+        return {
+          ...project,
+          totalTasks: projectTasks.length,
+          completedTasks: projectTasks.filter((t) => t.status === "done").length,
+          inProgressTasks: projectTasks.filter((t) => t.status === "in_progress").length,
+          overdueTasks: overdue.length,
+        };
+      });
+
+      setProjects(projectsWithStats);
+      setAllTasks(tasksData);
+
+      // Calculate team stats
+      const taskAssigneeMap: Record<string, string[]> = {};
+      await Promise.all(
+        tasksData.map(async (task) => {
+          const assignees = await getTaskAssignees(task.id);
+          taskAssigneeMap[task.id] = assignees.map((a) => a.user_id);
+        })
+      );
+
+      const teamStatsData = profilesData.map((profile) => {
+        const userTasks = tasksData.filter((task) =>
+          taskAssigneeMap[task.id]?.includes(profile.id)
+        );
+
+        const overdue = userTasks.filter((t) => {
+          if (t.status === "done" || !t.due_date) return false;
+          const dueDate = new Date(t.due_date);
+          dueDate.setHours(0, 0, 0, 0);
+          return dueDate < today;
+        }).length;
+
+        return {
+          profile,
+          total: userTasks.length,
+          completed: userTasks.filter((t) => t.status === "done").length,
+          inProgress: userTasks.filter((t) => t.status === "in_progress").length,
+          overdue,
+        };
+      });
+
+      setTeamStats(teamStatsData.filter((s) => s.total > 0));
+      setLoading(false);
+    };
+
     loadData();
   }, []);
 
@@ -370,6 +410,60 @@ export default function DashboardPage() {
                   <WeeklyOverview tasks={allTasks} />
                 </div>
               </div>
+
+              {/* Team Overview */}
+              {teamStats.length > 0 && (
+                <div className="bg-surface rounded-xl border border-border p-6 mb-6">
+                  <h3 className="text-sm font-semibold text-text-secondary mb-4">Team Übersicht</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {teamStats.map((stat) => {
+                      const displayName = stat.profile.full_name || stat.profile.email.split("@")[0];
+                      const initials = (stat.profile.full_name || stat.profile.email)
+                        .split(" ")
+                        .map((n) => n[0])
+                        .join("")
+                        .toUpperCase()
+                        .slice(0, 2);
+                      const openTasks = stat.total - stat.completed;
+
+                      return (
+                        <div
+                          key={stat.profile.id}
+                          className="flex items-center gap-4 p-4 rounded-lg border border-border hover:bg-primary-surface/30 transition-colors"
+                        >
+                          {stat.profile.avatar_url ? (
+                            <img
+                              src={stat.profile.avatar_url}
+                              alt={displayName}
+                              className="w-12 h-12 rounded-full"
+                            />
+                          ) : (
+                            <div className="w-12 h-12 rounded-full bg-primary text-white text-lg font-medium flex items-center justify-center">
+                              {initials}
+                            </div>
+                          )}
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium text-text-primary truncate">
+                              {displayName}
+                            </p>
+                            <div className="flex items-center gap-3 text-xs text-text-muted mt-1">
+                              <span>{openTasks} offen</span>
+                              <span>{stat.inProgress} in Arbeit</span>
+                              {stat.overdue > 0 && (
+                                <span className="text-error">{stat.overdue} überfällig</span>
+                              )}
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-2xl font-bold text-primary">{stat.total}</p>
+                            <p className="text-xs text-text-muted">{stat.completed} erledigt</p>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
 
               {/* Projects Overview */}
               <div className="bg-surface rounded-xl border border-border p-6">
