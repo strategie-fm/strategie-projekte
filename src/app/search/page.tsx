@@ -72,7 +72,7 @@ export default function SearchPage() {
             results.length > 0 ? (
               <section>
                 <h2 className="text-sm font-semibold text-text-secondary mb-3">
-                  {results.length} Ergebnis{results.length !== 1 ? "se" : ""} für "{query}"
+                  {results.length} Ergebnis{results.length !== 1 ? "se" : ""} für &ldquo;{query}&rdquo;
                 </h2>
                 <div className="bg-surface rounded-xl shadow-sm border border-border">
                   {results.map((task) => (
@@ -89,7 +89,7 @@ export default function SearchPage() {
               <div className="bg-surface rounded-xl shadow-sm border border-border p-12 text-center">
                 <SearchIcon className="w-12 h-12 text-text-muted mx-auto mb-4" />
                 <p className="text-text-muted mb-2">
-                  Keine Ergebnisse für "{query}"
+                  Keine Ergebnisse für &ldquo;{query}&rdquo;
                 </p>
                 <p className="text-sm text-text-muted">
                   Versuche einen anderen Suchbegriff
