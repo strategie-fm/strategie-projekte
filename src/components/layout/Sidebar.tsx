@@ -10,7 +10,6 @@ import {
   Search,
   Plus,
   FolderKanban,
-  Users,
   ChevronDown,
   LogOut,
 } from "lucide-react";
@@ -38,6 +37,11 @@ export function Sidebar() {
   const [isCreating, setIsCreating] = useState(false);
   const [showQuickAdd, setShowQuickAdd] = useState(false);
 
+  const loadProjects = async () => {
+    const data = await getProjects();
+    setProjects(data);
+  };
+
   // Listen for global new task event
   useEffect(() => {
     const handleNewTask = () => setShowQuickAdd(true);
@@ -52,13 +56,19 @@ export function Sidebar() {
     return () => window.removeEventListener("closeModals", handleClose);
   }, []);
 
+  // Listen for project updates
   useEffect(() => {
-    // Get initial user
+    const handleProjectUpdate = () => loadProjects();
+    window.addEventListener("projectsUpdated", handleProjectUpdate);
+    return () => window.removeEventListener("projectsUpdated", handleProjectUpdate);
+  }, []);
+
+  // Get user and listen for auth changes
+  useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
       setUser(user);
     });
 
-    // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (_event, session) => {
         setUser(session?.user ?? null);
@@ -68,17 +78,12 @@ export function Sidebar() {
     return () => subscription.unsubscribe();
   }, []);
 
+  // Load projects when user is available
   useEffect(() => {
-    // Load projects when user is available
     if (user) {
       loadProjects();
     }
   }, [user]);
-
-  const loadProjects = async () => {
-    const data = await getProjects();
-    setProjects(data);
-  };
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();

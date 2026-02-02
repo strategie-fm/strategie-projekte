@@ -1,24 +1,27 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Header } from "@/components/layout/Header";
 import { SortableTaskList } from "@/components/tasks/SortableTaskList";
 import { QuickAddTask } from "@/components/tasks/QuickAddTask";
 import { TaskDetailModal } from "@/components/tasks/TaskDetailModal";
+import { ProjectSettingsModal } from "@/components/projects/ProjectSettingsModal";
 import { getProject, getTasksByProject } from "@/lib/database";
 import type { Project, TaskWithRelations } from "@/types/database";
-import { FolderOpen } from "lucide-react";
+import { FolderOpen, Settings } from "lucide-react";
 
 export default function ProjectPage() {
   const params = useParams();
+  const router = useRouter();
   const projectId = params.id as string;
 
   const [project, setProject] = useState<Project | null>(null);
   const [tasks, setTasks] = useState<TaskWithRelations[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedTask, setSelectedTask] = useState<TaskWithRelations | null>(null);
+  const [showSettings, setShowSettings] = useState(false);
 
   const loadData = async () => {
     setLoading(true);
@@ -55,6 +58,14 @@ export default function ProjectPage() {
 
   const handleTaskCreated = () => {
     loadData();
+  };
+
+  const handleProjectUpdate = (updatedProject: Project) => {
+    setProject(updatedProject);
+  };
+
+  const handleProjectDelete = () => {
+    router.push("/");
   };
 
   if (loading) {
@@ -94,17 +105,25 @@ export default function ProjectPage() {
         />
 
         <div className="p-6">
-          <section className="mb-6">
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="text-sm font-semibold text-text-secondary flex items-center gap-2">
-                <span
-                  className="w-2 h-2 rounded-sm"
-                  style={{ backgroundColor: project.color }}
-                />
-                Aufgaben ({tasks.length})
-              </h2>
-            </div>
+          {/* Project Header with Settings */}
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-sm font-semibold text-text-secondary flex items-center gap-2">
+              <span
+                className="w-3 h-3 rounded"
+                style={{ backgroundColor: project.color }}
+              />
+              Aufgaben ({tasks.length})
+            </h2>
+            <button
+              onClick={() => setShowSettings(true)}
+              className="flex items-center gap-2 px-3 py-1.5 text-sm text-text-muted hover:text-text-primary hover:bg-divider rounded-lg transition-colors"
+            >
+              <Settings className="w-4 h-4" />
+              Einstellungen
+            </button>
+          </div>
 
+          <section className="mb-6">
             {tasks.length > 0 ? (
               <SortableTaskList
                 tasks={tasks}
@@ -130,12 +149,22 @@ export default function ProjectPage() {
         </div>
       </main>
 
+      {/* Task Detail Modal */}
       <TaskDetailModal
         task={selectedTask}
         isOpen={!!selectedTask}
         onClose={() => setSelectedTask(null)}
         onUpdate={handleTaskUpdate}
         onDelete={handleTaskDelete}
+      />
+
+      {/* Project Settings Modal */}
+      <ProjectSettingsModal
+        project={project}
+        isOpen={showSettings}
+        onClose={() => setShowSettings(false)}
+        onUpdate={handleProjectUpdate}
+        onDelete={handleProjectDelete}
       />
     </div>
   );
