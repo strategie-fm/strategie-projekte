@@ -43,7 +43,7 @@ export function SortableTaskItem({
     e.stopPropagation();
     const newStatus = task.status === "done" ? "todo" : "done";
     const updated = await toggleTaskComplete(task.id, newStatus === "done");
-    if (updated) {
+    if (updated && onUpdate) {
       onUpdate({ ...task, ...updated });
       // Notify sidebar to update progress
       window.dispatchEvent(new Event("taskUpdated"));
