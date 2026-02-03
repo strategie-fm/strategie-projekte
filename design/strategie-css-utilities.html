@@ -1,0 +1,1009 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>STRATEGIE - CSS Utilities Übersicht</title>
+  <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;500;600;700&family=Roboto:wght@400;500;600;700&family=Roboto+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --color-primary: #183c6c;
+      --color-primary-surface: #e8f0f8;
+      --color-background: #f0f0f0;
+      --color-surface: #ffffff;
+      --color-text-primary: #111827;
+      --color-text-secondary: #374151;
+      --color-text-muted: #6b7280;
+      --color-border: #e5e7eb;
+      
+      --font-heading: 'Open Sans', system-ui, sans-serif;
+      --font-body: 'Roboto', system-ui, sans-serif;
+      --font-mono: 'Roboto Mono', ui-monospace, monospace;
+    }
+    
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: var(--font-body);
+      background: var(--color-background);
+      color: var(--color-text-primary);
+      line-height: 1.6;
+      padding: 40px;
+    }
+    
+    h1 {
+      font-family: var(--font-heading);
+      font-size: 32px;
+      font-weight: 700;
+      margin-bottom: 8px;
+      color: var(--color-primary);
+    }
+    
+    h2 {
+      font-family: var(--font-heading);
+      font-size: 20px;
+      font-weight: 600;
+      margin: 40px 0 20px 0;
+      color: var(--color-primary);
+      border-bottom: 2px solid var(--color-primary);
+      padding-bottom: 8px;
+    }
+    
+    h3 {
+      font-family: var(--font-heading);
+      font-size: 16px;
+      font-weight: 600;
+      margin: 24px 0 12px 0;
+      color: var(--color-text-secondary);
+    }
+    
+    .subtitle {
+      color: var(--color-text-muted);
+      margin-bottom: 32px;
+    }
+    
+    .card {
+      background: var(--color-surface);
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 24px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    }
+    
+    /* Tables */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+    }
+    
+    th {
+      text-align: left;
+      padding: 12px 16px;
+      background: #f9fafb;
+      border-bottom: 2px solid var(--color-border);
+      font-weight: 600;
+      color: var(--color-text-secondary);
+    }
+    
+    td {
+      padding: 12px 16px;
+      border-bottom: 1px solid #f3f4f6;
+      vertical-align: middle;
+    }
+    
+    code {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      background: #f3f4f6;
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+    
+    .primary-code {
+      color: var(--color-primary);
+      background: var(--color-primary-surface);
+    }
+    
+    /* Visual Examples */
+    .visual-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+      gap: 16px;
+    }
+    
+    .visual-item {
+      text-align: center;
+    }
+    
+    .visual-box {
+      background: var(--color-primary);
+      border-radius: 4px;
+      margin-bottom: 8px;
+    }
+    
+    .visual-label {
+      font-size: 12px;
+      color: var(--color-text-muted);
+    }
+    
+    .visual-value {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--color-primary);
+    }
+    
+    /* Spacing Visual */
+    .spacing-visual {
+      display: flex;
+      align-items: flex-end;
+      gap: 12px;
+      padding: 20px;
+      background: #fafafa;
+      border-radius: 8px;
+      margin-bottom: 20px;
+    }
+    
+    .spacing-block {
+      background: var(--color-primary);
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 10px;
+      font-family: var(--font-mono);
+    }
+    
+    /* Border Radius Visual */
+    .radius-grid {
+      display: flex;
+      gap: 24px;
+      flex-wrap: wrap;
+    }
+    
+    .radius-item {
+      text-align: center;
+    }
+    
+    .radius-box {
+      width: 80px;
+      height: 80px;
+      background: var(--color-primary);
+      margin-bottom: 8px;
+    }
+    
+    /* Shadow Visual */
+    .shadow-grid {
+      display: flex;
+      gap: 24px;
+      flex-wrap: wrap;
+      padding: 20px;
+      background: #fafafa;
+      border-radius: 8px;
+    }
+    
+    .shadow-item {
+      text-align: center;
+    }
+    
+    .shadow-box {
+      width: 100px;
+      height: 80px;
+      background: white;
+      border-radius: 8px;
+      margin-bottom: 8px;
+    }
+    
+    /* Z-Index Visual */
+    .z-index-visual {
+      position: relative;
+      height: 200px;
+      background: #fafafa;
+      border-radius: 8px;
+      padding: 20px;
+    }
+    
+    .z-layer {
+      position: absolute;
+      padding: 12px 16px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 500;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    }
+    
+    /* Breakpoint Visual */
+    .breakpoint-bar {
+      display: flex;
+      height: 40px;
+      border-radius: 8px;
+      overflow: hidden;
+      margin-bottom: 16px;
+    }
+    
+    .breakpoint-segment {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 11px;
+      font-weight: 500;
+    }
+    
+    /* Transition Visual */
+    .transition-demo {
+      display: flex;
+      gap: 24px;
+      flex-wrap: wrap;
+    }
+    
+    .transition-item {
+      text-align: center;
+    }
+    
+    .transition-box {
+      width: 80px;
+      height: 80px;
+      background: var(--color-primary);
+      border-radius: 8px;
+      margin-bottom: 8px;
+      cursor: pointer;
+    }
+    
+    .transition-box:hover {
+      transform: scale(1.1);
+      background: #2a5490;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>STRATEGIE CSS Utilities</h1>
+  <p class="subtitle">Tailwind-kompatible Utility-Klassen für konsistentes Design</p>
+
+  <!-- ============================================ -->
+  <h2>1. Spacing (Abstände)</h2>
+  <!-- ============================================ -->
+  
+  <div class="card">
+    <p style="margin-bottom: 16px; color: #6b7280;">Einheitliches 4px-Raster für alle Abstände. Verwendung für margin, padding, gap.</p>
+    
+    <div class="spacing-visual">
+      <div class="spacing-block" style="width: 8px; height: 8px;">2</div>
+      <div class="spacing-block" style="width: 16px; height: 16px;">4</div>
+      <div class="spacing-block" style="width: 24px; height: 24px;">6</div>
+      <div class="spacing-block" style="width: 32px; height: 32px;">8</div>
+      <div class="spacing-block" style="width: 48px; height: 48px;">12</div>
+      <div class="spacing-block" style="width: 64px; height: 64px;">16</div>
+    </div>
+    
+    <table>
+      <thead>
+        <tr>
+          <th>Tailwind Klasse</th>
+          <th>Wert</th>
+          <th>Pixel</th>
+          <th>Verwendung</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td><code class="primary-code">p-0</code>, <code class="primary-code">m-0</code></td><td>0</td><td>0px</td><td>Reset</td></tr>
+        <tr><td><code class="primary-code">p-0.5</code>, <code class="primary-code">m-0.5</code></td><td>0.125rem</td><td>2px</td><td>Minimaler Abstand</td></tr>
+        <tr><td><code class="primary-code">p-1</code>, <code class="primary-code">m-1</code></td><td>0.25rem</td><td>4px</td><td>Kompakter Abstand</td></tr>
+        <tr><td><code class="primary-code">p-2</code>, <code class="primary-code">m-2</code></td><td>0.5rem</td><td>8px</td><td>Standard klein</td></tr>
+        <tr><td><code class="primary-code">p-3</code>, <code class="primary-code">m-3</code></td><td>0.75rem</td><td>12px</td><td>Standard</td></tr>
+        <tr style="background: #f9fafb;"><td><code class="primary-code">p-4</code>, <code class="primary-code">m-4</code></td><td>1rem</td><td>16px</td><td><strong>Basis-Einheit!</strong></td></tr>
+        <tr><td><code class="primary-code">p-5</code>, <code class="primary-code">m-5</code></td><td>1.25rem</td><td>20px</td><td>Mittlerer Abstand</td></tr>
+        <tr><td><code class="primary-code">p-6</code>, <code class="primary-code">m-6</code></td><td>1.5rem</td><td>24px</td><td>Card Padding</td></tr>
+        <tr><td><code class="primary-code">p-8</code>, <code class="primary-code">m-8</code></td><td>2rem</td><td>32px</td><td>Section Abstand</td></tr>
+        <tr><td><code class="primary-code">p-10</code>, <code class="primary-code">m-10</code></td><td>2.5rem</td><td>40px</td><td>Großer Abstand</td></tr>
+        <tr><td><code class="primary-code">p-12</code>, <code class="primary-code">m-12</code></td><td>3rem</td><td>48px</td><td>Container Abstand</td></tr>
+        <tr><td><code class="primary-code">p-16</code>, <code class="primary-code">m-16</code></td><td>4rem</td><td>64px</td><td>Seiten-Margin</td></tr>
+      </tbody>
+    </table>
+    
+    <h3>Richtungsspezifisch</h3>
+    <table style="margin-top: 12px;">
+      <thead>
+        <tr>
+          <th>Suffix</th>
+          <th>Richtung</th>
+          <th>Beispiel</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td><code>-t</code></td><td>Top (oben)</td><td><code class="primary-code">pt-4</code>, <code class="primary-code">mt-4</code></td></tr>
+        <tr><td><code>-b</code></td><td>Bottom (unten)</td><td><code class="primary-code">pb-4</code>, <code class="primary-code">mb-4</code></td></tr>
+        <tr><td><code>-l</code></td><td>Left (links)</td><td><code class="primary-code">pl-4</code>, <code class="primary-code">ml-4</code></td></tr>
+        <tr><td><code>-r</code></td><td>Right (rechts)</td><td><code class="primary-code">pr-4</code>, <code class="primary-code">mr-4</code></td></tr>
+        <tr><td><code>-x</code></td><td>Horizontal (links + rechts)</td><td><code class="primary-code">px-4</code>, <code class="primary-code">mx-4</code></td></tr>
+        <tr><td><code>-y</code></td><td>Vertikal (oben + unten)</td><td><code class="primary-code">py-4</code>, <code class="primary-code">my-4</code></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ============================================ -->
+  <h2>2. Border Radius</h2>
+  <!-- ============================================ -->
+  
+  <div class="card">
+    <div class="radius-grid" style="margin-bottom: 24px;">
+      <div class="radius-item">
+        <div class="radius-box" style="border-radius: 0;"></div>
+        <div class="visual-label">none</div>
+        <div class="visual-value">0px</div>
+      </div>
+      <div class="radius-item">
+        <div class="radius-box" style="border-radius: 2px;"></div>
+        <div class="visual-label">sm</div>
+        <div class="visual-value">2px</div>
+      </div>
+      <div class="radius-item">
+        <div class="radius-box" style="border-radius: 4px;"></div>
+        <div class="visual-label">DEFAULT</div>
+        <div class="visual-value">4px</div>
+      </div>
+      <div class="radius-item">
+        <div class="radius-box" style="border-radius: 6px;"></div>
+        <div class="visual-label">md</div>
+        <div class="visual-value">6px</div>
+      </div>
+      <div class="radius-item">
+        <div class="radius-box" style="border-radius: 8px;"></div>
+        <div class="visual-label">lg</div>
+        <div class="visual-value">8px</div>
+      </div>
+      <div class="radius-item">
+        <div class="radius-box" style="border-radius: 12px;"></div>
+        <div class="visual-label">xl</div>
+        <div class="visual-value">12px</div>
+      </div>
+      <div class="radius-item">
+        <div class="radius-box" style="border-radius: 16px;"></div>
+        <div class="visual-label">2xl</div>
+        <div class="visual-value">16px</div>
+      </div>
+      <div class="radius-item">
+        <div class="radius-box" style="border-radius: 9999px;"></div>
+        <div class="visual-label">full</div>
+        <div class="visual-value">9999px</div>
+      </div>
+    </div>
+    
+    <table>
+      <thead>
+        <tr>
+          <th>Tailwind Klasse</th>
+          <th>Wert</th>
+          <th>Verwendung</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td><code class="primary-code">rounded-none</code></td><td>0</td><td>Eckig</td></tr>
+        <tr><td><code class="primary-code">rounded-sm</code></td><td>2px</td><td>Minimal</td></tr>
+        <tr><td><code class="primary-code">rounded</code></td><td>4px</td><td>Standard</td></tr>
+        <tr><td><code class="primary-code">rounded-md</code></td><td>6px</td><td>Inputs</td></tr>
+        <tr style="background: #f9fafb;"><td><code class="primary-code">rounded-lg</code></td><td>8px</td><td><strong>Buttons, kleine Cards!</strong></td></tr>
+        <tr style="background: #f9fafb;"><td><code class="primary-code">rounded-xl</code></td><td>12px</td><td><strong>Cards, Modals!</strong></td></tr>
+        <tr><td><code class="primary-code">rounded-2xl</code></td><td>16px</td><td>Große Cards</td></tr>
+        <tr><td><code class="primary-code">rounded-full</code></td><td>9999px</td><td>Badges, Avatare</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ============================================ -->
+  <h2>3. Shadows</h2>
+  <!-- ============================================ -->
+  
+  <div class="card">
+    <div class="shadow-grid" style="margin-bottom: 24px;">
+      <div class="shadow-item">
+        <div class="shadow-box" style="box-shadow: 0 1px 2px rgba(0,0,0,0.05);"></div>
+        <div class="visual-label">sm</div>
+      </div>
+      <div class="shadow-item">
+        <div class="shadow-box" style="box-shadow: 0 1px 3px rgba(0,0,0,0.1), 0 1px 2px rgba(0,0,0,0.06);"></div>
+        <div class="visual-label">DEFAULT</div>
+      </div>
+      <div class="shadow-item">
+        <div class="shadow-box" style="box-shadow: 0 4px 6px rgba(0,0,0,0.1), 0 2px 4px rgba(0,0,0,0.06);"></div>
+        <div class="visual-label">md</div>
+      </div>
+      <div class="shadow-item">
+        <div class="shadow-box" style="box-shadow: 0 10px 15px rgba(0,0,0,0.1), 0 4px 6px rgba(0,0,0,0.05);"></div>
+        <div class="visual-label">lg</div>
+      </div>
+      <div class="shadow-item">
+        <div class="shadow-box" style="box-shadow: 0 20px 25px rgba(0,0,0,0.1), 0 10px 10px rgba(0,0,0,0.04);"></div>
+        <div class="visual-label">xl</div>
+      </div>
+      <div class="shadow-item">
+        <div class="shadow-box" style="box-shadow: 0 4px 14px rgba(24,60,108,0.25);"></div>
+        <div class="visual-label">primary</div>
+      </div>
+    </div>
+    
+    <table>
+      <thead>
+        <tr>
+          <th>Tailwind Klasse</th>
+          <th>Wert</th>
+          <th>Verwendung</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td><code class="primary-code">shadow-sm</code></td><td>0 1px 2px rgba(0,0,0,0.05)</td><td>Subtiler Schatten</td></tr>
+        <tr style="background: #f9fafb;"><td><code class="primary-code">shadow</code></td><td>0 1px 3px rgba(0,0,0,0.1)</td><td><strong>Standard für Cards!</strong></td></tr>
+        <tr><td><code class="primary-code">shadow-md</code></td><td>0 4px 6px rgba(0,0,0,0.1)</td><td>Erhöhte Elemente</td></tr>
+        <tr style="background: #f9fafb;"><td><code class="primary-code">shadow-lg</code></td><td>0 10px 15px rgba(0,0,0,0.1)</td><td><strong>Dropdowns, Modals!</strong></td></tr>
+        <tr><td><code class="primary-code">shadow-xl</code></td><td>0 20px 25px rgba(0,0,0,0.1)</td><td>Floating Elemente</td></tr>
+        <tr><td><code class="primary-code">shadow-2xl</code></td><td>0 25px 50px rgba(0,0,0,0.25)</td><td>Maximale Tiefe</td></tr>
+        <tr><td><code class="primary-code">shadow-none</code></td><td>none</td><td>Schatten entfernen</td></tr>
+        <tr style="background: #e8f0f8;"><td><code class="primary-code">shadow-primary</code></td><td>0 4px 14px rgba(24,60,108,0.25)</td><td><strong>Primary Buttons!</strong></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ============================================ -->
+  <h2>4. Z-Index</h2>
+  <!-- ============================================ -->
+  
+  <div class="card">
+    <div class="z-index-visual" style="margin-bottom: 24px;">
+      <div class="z-layer" style="z-index: 0; left: 20px; top: 20px; background: #f3f4f6; color: #374151;">
+        z-0: Base Content
+      </div>
+      <div class="z-layer" style="z-index: 10; left: 40px; top: 40px; background: #e8f0f8; color: #183c6c;">
+        z-10: Elevated (Cards)
+      </div>
+      <div class="z-layer" style="z-index: 20; left: 60px; top: 60px; background: #d1fae5; color: #059669;">
+        z-20: Dropdown
+      </div>
+      <div class="z-layer" style="z-index: 30; left: 80px; top: 80px; background: #fef3c7; color: #b45309;">
+        z-30: Sticky Header
+      </div>
+      <div class="z-layer" style="z-index: 40; left: 100px; top: 100px; background: #fee2e2; color: #dc2626;">
+        z-40: Modal
+      </div>
+      <div class="z-layer" style="z-index: 50; left: 120px; top: 120px; background: #183c6c; color: white;">
+        z-50: Toast
+      </div>
+    </div>
+    
+    <table>
+      <thead>
+        <tr>
+          <th>Tailwind Klasse</th>
+          <th>Wert</th>
+          <th>Verwendung</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td><code class="primary-code">z-0</code></td><td>0</td><td>Basis-Ebene</td></tr>
+        <tr><td><code class="primary-code">z-10</code></td><td>10</td><td>Erhöhte Elemente, Cards</td></tr>
+        <tr style="background: #f9fafb;"><td><code class="primary-code">z-20</code></td><td>20</td><td><strong>Dropdowns, Tooltips!</strong></td></tr>
+        <tr><td><code class="primary-code">z-30</code></td><td>30</td><td>Sticky Header/Sidebar</td></tr>
+        <tr style="background: #f9fafb;"><td><code class="primary-code">z-40</code></td><td>40</td><td><strong>Modals, Dialoge!</strong></td></tr>
+        <tr><td><code class="primary-code">z-50</code></td><td>50</td><td>Toasts, Notifications</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ============================================ -->
+  <h2>5. Transitions</h2>
+  <!-- ============================================ -->
+  
+  <div class="card">
+    <p style="margin-bottom: 16px; color: #6b7280;">Hover über die Boxen um die Transition-Geschwindigkeit zu sehen.</p>
+    
+    <div class="transition-demo" style="margin-bottom: 24px;">
+      <div class="transition-item">
+        <div class="transition-box" style="transition: all 150ms ease-in-out;"></div>
+        <div class="visual-label">Fast</div>
+        <div class="visual-value">150ms</div>
+      </div>
+      <div class="transition-item">
+        <div class="transition-box" style="transition: all 250ms ease-in-out;"></div>
+        <div class="visual-label">Normal</div>
+        <div class="visual-value">250ms</div>
+      </div>
+      <div class="transition-item">
+        <div class="transition-box" style="transition: all 350ms ease-in-out;"></div>
+        <div class="visual-label">Slow</div>
+        <div class="visual-value">350ms</div>
+      </div>
+      <div class="transition-item">
+        <div class="transition-box" style="transition: all 500ms ease-in-out;"></div>
+        <div class="visual-label">Slower</div>
+        <div class="visual-value">500ms</div>
+      </div>
+    </div>
+    
+    <table>
+      <thead>
+        <tr>
+          <th>Tailwind Klasse</th>
+          <th>Dauer</th>
+          <th>Verwendung</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr style="background: #f9fafb;"><td><code class="primary-code">duration-150</code></td><td>150ms</td><td><strong>Buttons, Hover-Effekte!</strong></td></tr>
+        <tr><td><code class="primary-code">duration-200</code></td><td>200ms</td><td>Schnelle Animationen</td></tr>
+        <tr><td><code class="primary-code">duration-300</code></td><td>300ms</td><td>Standard Animationen</td></tr>
+        <tr><td><code class="primary-code">duration-500</code></td><td>500ms</td><td>Langsame Animationen</td></tr>
+      </tbody>
+    </table>
+    
+    <h3>Transition Properties</h3>
+    <table style="margin-top: 12px;">
+      <thead>
+        <tr>
+          <th>Tailwind Klasse</th>
+          <th>Properties</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td><code class="primary-code">transition-all</code></td><td>Alle Properties</td></tr>
+        <tr><td><code class="primary-code">transition-colors</code></td><td>Farben (background, border, text)</td></tr>
+        <tr><td><code class="primary-code">transition-opacity</code></td><td>Nur Opacity</td></tr>
+        <tr><td><code class="primary-code">transition-transform</code></td><td>Nur Transform</td></tr>
+      </tbody>
+    </table>
+    
+    <h3>Easing Functions</h3>
+    <table style="margin-top: 12px;">
+      <thead>
+        <tr>
+          <th>Tailwind Klasse</th>
+          <th>Kurve</th>
+          <th>Verwendung</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td><code class="primary-code">ease-linear</code></td><td>linear</td><td>Konstante Geschwindigkeit</td></tr>
+        <tr style="background: #f9fafb;"><td><code class="primary-code">ease-in-out</code></td><td>ease-in-out</td><td><strong>Standard für UI!</strong></td></tr>
+        <tr><td><code class="primary-code">ease-in</code></td><td>ease-in</td><td>Langsamer Start</td></tr>
+        <tr><td><code class="primary-code">ease-out</code></td><td>ease-out</td><td>Langsames Ende</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ============================================ -->
+  <h2>6. Breakpoints</h2>
+  <!-- ============================================ -->
+  
+  <div class="card">
+    <div class="breakpoint-bar">
+      <div class="breakpoint-segment" style="flex: 640; background: #6b7280;">Mobile (&lt;640px)</div>
+      <div class="breakpoint-segment" style="flex: 128; background: #183c6c;">sm</div>
+      <div class="breakpoint-segment" style="flex: 256; background: #2a5490;">md</div>
+      <div class="breakpoint-segment" style="flex: 256; background: #3b82f6;">lg</div>
+      <div class="breakpoint-segment" style="flex: 256; background: #059669;">xl</div>
+    </div>
+    
+    <table>
+      <thead>
+        <tr>
+          <th>Prefix</th>
+          <th>Min-Width</th>
+          <th>Geräte</th>
+          <th>Beispiel</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>(default)</td><td>0px</td><td>Mobile first</td><td><code class="primary-code">p-4</code></td></tr>
+        <tr><td><code class="primary-code">sm:</code></td><td>640px</td><td>Große Smartphones</td><td><code class="primary-code">sm:p-6</code></td></tr>
+        <tr style="background: #f9fafb;"><td><code class="primary-code">md:</code></td><td>768px</td><td><strong>Tablets!</strong></td><td><code class="primary-code">md:flex</code></td></tr>
+        <tr style="background: #f9fafb;"><td><code class="primary-code">lg:</code></td><td>1024px</td><td><strong>Laptops!</strong></td><td><code class="primary-code">lg:grid-cols-3</code></td></tr>
+        <tr><td><code class="primary-code">xl:</code></td><td>1280px</td><td>Desktops</td><td><code class="primary-code">xl:max-w-6xl</code></td></tr>
+        <tr><td><code class="primary-code">2xl:</code></td><td>1536px</td><td>Große Monitore</td><td><code class="primary-code">2xl:grid-cols-4</code></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ============================================ -->
+  <h2>7. Flexbox</h2>
+  <!-- ============================================ -->
+  
+  <div class="card">
+    <h3>Container</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>Tailwind Klasse</th>
+          <th>CSS Property</th>
+          <th>Verwendung</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr style="background: #f9fafb;"><td><code class="primary-code">flex</code></td><td>display: flex</td><td><strong>Flex Container aktivieren!</strong></td></tr>
+        <tr><td><code class="primary-code">inline-flex</code></td><td>display: inline-flex</td><td>Inline Flex Container</td></tr>
+        <tr><td><code class="primary-code">flex-row</code></td><td>flex-direction: row</td><td>Horizontal (Standard)</td></tr>
+        <tr><td><code class="primary-code">flex-col</code></td><td>flex-direction: column</td><td>Vertikal stapeln</td></tr>
+        <tr><td><code class="primary-code">flex-wrap</code></td><td>flex-wrap: wrap</td><td>Umbrechen erlauben</td></tr>
+        <tr><td><code class="primary-code">flex-nowrap</code></td><td>flex-wrap: nowrap</td><td>Nicht umbrechen</td></tr>
+      </tbody>
+    </table>
+    
+    <h3>Justify Content (Hauptachse)</h3>
+    <table style="margin-top: 12px;">
+      <thead>
+        <tr>
+          <th>Tailwind Klasse</th>
+          <th>CSS Wert</th>
+          <th>Verwendung</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td><code class="primary-code">justify-start</code></td><td>flex-start</td><td>Am Anfang</td></tr>
+        <tr><td><code class="primary-code">justify-center</code></td><td>center</td><td>Zentriert</td></tr>
+        <tr><td><code class="primary-code">justify-end</code></td><td>flex-end</td><td>Am Ende</td></tr>
+        <tr style="background: #f9fafb;"><td><code class="primary-code">justify-between</code></td><td>space-between</td><td><strong>Verteilt mit Abstand!</strong></td></tr>
+        <tr><td><code class="primary-code">justify-around</code></td><td>space-around</td><td>Gleichmäßig verteilt</td></tr>
+        <tr><td><code class="primary-code">justify-evenly</code></td><td>space-evenly</td><td>Exakt gleichmäßig</td></tr>
+      </tbody>
+    </table>
+    
+    <h3>Align Items (Querachse)</h3>
+    <table style="margin-top: 12px;">
+      <thead>
+        <tr>
+          <th>Tailwind Klasse</th>
+          <th>CSS Wert</th>
+          <th>Verwendung</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td><code class="primary-code">items-start</code></td><td>flex-start</td><td>Oben ausrichten</td></tr>
+        <tr style="background: #f9fafb;"><td><code class="primary-code">items-center</code></td><td>center</td><td><strong>Vertikal zentrieren!</strong></td></tr>
+        <tr><td><code class="primary-code">items-end</code></td><td>flex-end</td><td>Unten ausrichten</td></tr>
+        <tr><td><code class="primary-code">items-stretch</code></td><td>stretch</td><td>Volle Höhe (Standard)</td></tr>
+        <tr><td><code class="primary-code">items-baseline</code></td><td>baseline</td><td>Textbaseline</td></tr>
+      </tbody>
+    </table>
+    
+    <h3>Flex Items</h3>
+    <table style="margin-top: 12px;">
+      <thead>
+        <tr>
+          <th>Tailwind Klasse</th>
+          <th>CSS Property</th>
+          <th>Verwendung</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr style="background: #f9fafb;"><td><code class="primary-code">flex-1</code></td><td>flex: 1 1 0%</td><td><strong>Flexibel wachsen!</strong></td></tr>
+        <tr><td><code class="primary-code">flex-auto</code></td><td>flex: 1 1 auto</td><td>Wachsen mit Basis</td></tr>
+        <tr><td><code class="primary-code">flex-none</code></td><td>flex: none</td><td>Fixe Größe</td></tr>
+        <tr><td><code class="primary-code">grow</code></td><td>flex-grow: 1</td><td>Wachsen erlauben</td></tr>
+        <tr><td><code class="primary-code">grow-0</code></td><td>flex-grow: 0</td><td>Nicht wachsen</td></tr>
+        <tr><td><code class="primary-code">shrink</code></td><td>flex-shrink: 1</td><td>Schrumpfen erlauben</td></tr>
+        <tr><td><code class="primary-code">shrink-0</code></td><td>flex-shrink: 0</td><td>Nicht schrumpfen</td></tr>
+      </tbody>
+    </table>
+    
+    <h3>Gap (Abstand zwischen Items)</h3>
+    <table style="margin-top: 12px;">
+      <thead>
+        <tr>
+          <th>Tailwind Klasse</th>
+          <th>Wert</th>
+          <th>Verwendung</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td><code class="primary-code">gap-2</code></td><td>8px</td><td>Kompakter Abstand</td></tr>
+        <tr><td><code class="primary-code">gap-3</code></td><td>12px</td><td>Standard klein</td></tr>
+        <tr style="background: #f9fafb;"><td><code class="primary-code">gap-4</code></td><td>16px</td><td><strong>Standard!</strong></td></tr>
+        <tr><td><code class="primary-code">gap-6</code></td><td>24px</td><td>Großer Abstand</td></tr>
+        <tr><td><code class="primary-code">gap-8</code></td><td>32px</td><td>Section Abstand</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ============================================ -->
+  <h2>8. Grid</h2>
+  <!-- ============================================ -->
+  
+  <div class="card">
+    <h3>Grid Container</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>Tailwind Klasse</th>
+          <th>CSS Property</th>
+          <th>Verwendung</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr style="background: #f9fafb;"><td><code class="primary-code">grid</code></td><td>display: grid</td><td><strong>Grid aktivieren!</strong></td></tr>
+        <tr><td><code class="primary-code">grid-cols-1</code></td><td>grid-template-columns: repeat(1, 1fr)</td><td>1 Spalte</td></tr>
+        <tr style="background: #f9fafb;"><td><code class="primary-code">grid-cols-2</code></td><td>grid-template-columns: repeat(2, 1fr)</td><td><strong>2 Spalten!</strong></td></tr>
+        <tr style="background: #f9fafb;"><td><code class="primary-code">grid-cols-3</code></td><td>grid-template-columns: repeat(3, 1fr)</td><td><strong>3 Spalten!</strong></td></tr>
+        <tr><td><code class="primary-code">grid-cols-4</code></td><td>grid-template-columns: repeat(4, 1fr)</td><td>4 Spalten</td></tr>
+        <tr><td><code class="primary-code">grid-cols-6</code></td><td>grid-template-columns: repeat(6, 1fr)</td><td>6 Spalten</td></tr>
+        <tr><td><code class="primary-code">grid-cols-12</code></td><td>grid-template-columns: repeat(12, 1fr)</td><td>12er Grid</td></tr>
+      </tbody>
+    </table>
+    
+    <h3>Column Span</h3>
+    <table style="margin-top: 12px;">
+      <thead>
+        <tr>
+          <th>Tailwind Klasse</th>
+          <th>CSS Property</th>
+          <th>Verwendung</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td><code class="primary-code">col-span-1</code></td><td>grid-column: span 1</td><td>1 Spalte</td></tr>
+        <tr><td><code class="primary-code">col-span-2</code></td><td>grid-column: span 2</td><td>2 Spalten</td></tr>
+        <tr><td><code class="primary-code">col-span-3</code></td><td>grid-column: span 3</td><td>3 Spalten</td></tr>
+        <tr><td><code class="primary-code">col-span-full</code></td><td>grid-column: 1 / -1</td><td>Volle Breite</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ============================================ -->
+  <h2>9. Border</h2>
+  <!-- ============================================ -->
+  
+  <div class="card">
+    <h3>Border Width</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>Tailwind Klasse</th>
+          <th>Wert</th>
+          <th>Verwendung</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td><code class="primary-code">border-0</code></td><td>0px</td><td>Kein Border</td></tr>
+        <tr style="background: #f9fafb;"><td><code class="primary-code">border</code></td><td>1px</td><td><strong>Standard Border!</strong></td></tr>
+        <tr><td><code class="primary-code">border-2</code></td><td>2px</td><td>Betonte Borders, Focus</td></tr>
+        <tr><td><code class="primary-code">border-4</code></td><td>4px</td><td>Starke Betonung</td></tr>
+      </tbody>
+    </table>
+    
+    <h3>Border Style</h3>
+    <table style="margin-top: 12px;">
+      <thead>
+        <tr>
+          <th>Tailwind Klasse</th>
+          <th>Style</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td><code class="primary-code">border-solid</code></td><td>Durchgezogen (Standard)</td></tr>
+        <tr><td><code class="primary-code">border-dashed</code></td><td>Gestrichelt</td></tr>
+        <tr><td><code class="primary-code">border-dotted</code></td><td>Gepunktet</td></tr>
+        <tr><td><code class="primary-code">border-none</code></td><td>Kein Border</td></tr>
+      </tbody>
+    </table>
+    
+    <h3>Border Seiten</h3>
+    <table style="margin-top: 12px;">
+      <thead>
+        <tr>
+          <th>Tailwind Klasse</th>
+          <th>Seite</th>
+          <th>Verwendung</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td><code class="primary-code">border</code></td><td>Alle</td><td>Cards, Inputs</td></tr>
+        <tr><td><code class="primary-code">border-t</code></td><td>Oben</td><td>Divider, Footer</td></tr>
+        <tr><td><code class="primary-code">border-b</code></td><td>Unten</td><td>Header, Tabellen-Zeilen</td></tr>
+        <tr><td><code class="primary-code">border-l</code></td><td>Links</td><td>Sidebar, Quotes</td></tr>
+        <tr><td><code class="primary-code">border-r</code></td><td>Rechts</td><td>Sidebar</td></tr>
+        <tr><td><code class="primary-code">border-x</code></td><td>Links + Rechts</td><td>Horizontale Borders</td></tr>
+        <tr><td><code class="primary-code">border-y</code></td><td>Oben + Unten</td><td>Vertikale Borders</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ============================================ -->
+  <h2>10. Opacity</h2>
+  <!-- ============================================ -->
+  
+  <div class="card">
+    <div style="display: flex; gap: 16px; margin-bottom: 24px;">
+      <div style="text-align: center;">
+        <div style="width: 60px; height: 60px; background: #183c6c; opacity: 0; border: 1px dashed #ccc;"></div>
+        <div class="visual-label" style="margin-top: 8px;">0</div>
+      </div>
+      <div style="text-align: center;">
+        <div style="width: 60px; height: 60px; background: #183c6c; opacity: 0.25;"></div>
+        <div class="visual-label" style="margin-top: 8px;">25</div>
+      </div>
+      <div style="text-align: center;">
+        <div style="width: 60px; height: 60px; background: #183c6c; opacity: 0.5;"></div>
+        <div class="visual-label" style="margin-top: 8px;">50</div>
+      </div>
+      <div style="text-align: center;">
+        <div style="width: 60px; height: 60px; background: #183c6c; opacity: 0.75;"></div>
+        <div class="visual-label" style="margin-top: 8px;">75</div>
+      </div>
+      <div style="text-align: center;">
+        <div style="width: 60px; height: 60px; background: #183c6c; opacity: 1;"></div>
+        <div class="visual-label" style="margin-top: 8px;">100</div>
+      </div>
+    </div>
+    
+    <table>
+      <thead>
+        <tr>
+          <th>Tailwind Klasse</th>
+          <th>Wert</th>
+          <th>Verwendung</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td><code class="primary-code">opacity-0</code></td><td>0</td><td>Unsichtbar (für Animationen)</td></tr>
+        <tr><td><code class="primary-code">opacity-25</code></td><td>0.25</td><td>Sehr transparent</td></tr>
+        <tr><td><code class="primary-code">opacity-50</code></td><td>0.50</td><td>Halb transparent, Disabled</td></tr>
+        <tr><td><code class="primary-code">opacity-75</code></td><td>0.75</td><td>Leicht transparent</td></tr>
+        <tr><td><code class="primary-code">opacity-100</code></td><td>1</td><td>Voll sichtbar (Standard)</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ============================================ -->
+  <h2>11. Cursor</h2>
+  <!-- ============================================ -->
+  
+  <div class="card">
+    <table>
+      <thead>
+        <tr>
+          <th>Tailwind Klasse</th>
+          <th>Cursor</th>
+          <th>Verwendung</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td><code class="primary-code">cursor-auto</code></td><td>auto</td><td>Browser-Standard</td></tr>
+        <tr><td><code class="primary-code">cursor-default</code></td><td>default</td><td>Normaler Pfeil</td></tr>
+        <tr style="background: #f9fafb;"><td><code class="primary-code">cursor-pointer</code></td><td>pointer</td><td><strong>Klickbare Elemente!</strong></td></tr>
+        <tr><td><code class="primary-code">cursor-wait</code></td><td>wait</td><td>Ladevorgang</td></tr>
+        <tr><td><code class="primary-code">cursor-text</code></td><td>text</td><td>Text-Eingabe</td></tr>
+        <tr><td><code class="primary-code">cursor-move</code></td><td>move</td><td>Drag & Drop</td></tr>
+        <tr><td><code class="primary-code">cursor-not-allowed</code></td><td>not-allowed</td><td>Deaktivierte Elemente</td></tr>
+        <tr><td><code class="primary-code">cursor-grab</code></td><td>grab</td><td>Greifbar (vor Drag)</td></tr>
+        <tr><td><code class="primary-code">cursor-grabbing</code></td><td>grabbing</td><td>Wird gezogen</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ============================================ -->
+  <h2>12. Overflow</h2>
+  <!-- ============================================ -->
+  
+  <div class="card">
+    <table>
+      <thead>
+        <tr>
+          <th>Tailwind Klasse</th>
+          <th>Wert</th>
+          <th>Verwendung</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td><code class="primary-code">overflow-auto</code></td><td>auto</td><td>Scrollbar bei Bedarf</td></tr>
+        <tr><td><code class="primary-code">overflow-hidden</code></td><td>hidden</td><td>Inhalt abschneiden</td></tr>
+        <tr><td><code class="primary-code">overflow-visible</code></td><td>visible</td><td>Inhalt überläuft</td></tr>
+        <tr><td><code class="primary-code">overflow-scroll</code></td><td>scroll</td><td>Immer Scrollbar</td></tr>
+        <tr><td><code class="primary-code">overflow-x-auto</code></td><td>auto (horizontal)</td><td>Horizontales Scrollen</td></tr>
+        <tr><td><code class="primary-code">overflow-y-auto</code></td><td>auto (vertikal)</td><td>Vertikales Scrollen (Dropdowns!)</td></tr>
+        <tr><td><code class="primary-code">overflow-x-hidden</code></td><td>hidden (horizontal)</td><td>Horizontal abschneiden</td></tr>
+        <tr><td><code class="primary-code">overflow-y-hidden</code></td><td>hidden (vertikal)</td><td>Vertikal abschneiden</td></tr>
+      </tbody>
+    </table>
+    
+    <h3>Text Overflow</h3>
+    <table style="margin-top: 12px;">
+      <thead>
+        <tr>
+          <th>Tailwind Klasse</th>
+          <th>Effekt</th>
+          <th>Verwendung</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td><code class="primary-code">truncate</code></td><td>Text mit ... abschneiden</td><td>Lange Texte in Tabellen</td></tr>
+        <tr><td><code class="primary-code">text-ellipsis</code></td><td>Ellipsis am Ende</td><td>Überlaufender Text</td></tr>
+        <tr><td><code class="primary-code">text-clip</code></td><td>Hart abschneiden</td><td>Ohne Ellipsis</td></tr>
+        <tr><td><code class="primary-code">whitespace-nowrap</code></td><td>Kein Umbruch</td><td>Einzeilig halten</td></tr>
+        <tr><td><code class="primary-code">line-clamp-2</code></td><td>Nach 2 Zeilen abschneiden</td><td>Beschreibungen</td></tr>
+        <tr><td><code class="primary-code">line-clamp-3</code></td><td>Nach 3 Zeilen abschneiden</td><td>Längere Beschreibungen</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ============================================ -->
+  <h2>13. CSS Variables (Zum Kopieren)</h2>
+  <!-- ============================================ -->
+  
+  <div class="card">
+    <pre style="background: #1f2937; color: #e5e7eb; padding: 20px; border-radius: 8px; overflow-x: auto; font-size: 13px; line-height: 1.6;">
+:root {
+  /* ============================================
+     SPACING
+     ============================================ */
+  --space-0: 0;
+  --space-0.5: 0.125rem;  /* 2px */
+  --space-1: 0.25rem;     /* 4px */
+  --space-1.5: 0.375rem;  /* 6px */
+  --space-2: 0.5rem;      /* 8px */
+  --space-2.5: 0.625rem;  /* 10px */
+  --space-3: 0.75rem;     /* 12px */
+  --space-4: 1rem;        /* 16px */
+  --space-5: 1.25rem;     /* 20px */
+  --space-6: 1.5rem;      /* 24px */
+  --space-8: 2rem;        /* 32px */
+  --space-10: 2.5rem;     /* 40px */
+  --space-12: 3rem;       /* 48px */
+  --space-16: 4rem;       /* 64px */
+  
+  /* ============================================
+     BORDER RADIUS
+     ============================================ */
+  --radius-none: 0;
+  --radius-sm: 0.125rem;   /* 2px */
+  --radius: 0.25rem;       /* 4px */
+  --radius-md: 0.375rem;   /* 6px */
+  --radius-lg: 0.5rem;     /* 8px */
+  --radius-xl: 0.75rem;    /* 12px */
+  --radius-2xl: 1rem;      /* 16px */
+  --radius-full: 9999px;
+  
+  /* ============================================
+     SHADOWS
+     ============================================ */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow: 0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06);
+  --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.1), 0 2px 4px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1), 0 4px 6px rgba(0, 0, 0, 0.05);
+  --shadow-xl: 0 20px 25px rgba(0, 0, 0, 0.1), 0 10px 10px rgba(0, 0, 0, 0.04);
+  --shadow-2xl: 0 25px 50px rgba(0, 0, 0, 0.25);
+  --shadow-primary: 0 4px 14px rgba(24, 60, 108, 0.25);
+  
+  /* ============================================
+     Z-INDEX
+     ============================================ */
+  --z-base: 0;
+  --z-elevated: 10;
+  --z-dropdown: 20;
+  --z-sticky: 30;
+  --z-modal: 40;
+  --z-toast: 50;
+  
+  /* ============================================
+     TRANSITIONS
+     ============================================ */
+  --transition-fast: 150ms ease-in-out;
+  --transition-normal: 250ms ease-in-out;
+  --transition-slow: 350ms ease-in-out;
+  --transition-slower: 500ms ease-in-out;
+  
+  /* ============================================
+     BREAKPOINTS (for reference)
+     ============================================ */
+  --breakpoint-sm: 640px;
+  --breakpoint-md: 768px;
+  --breakpoint-lg: 1024px;
+  --breakpoint-xl: 1280px;
+  --breakpoint-2xl: 1536px;
+}
+    </pre>
+  </div>
+
+</body>
+</html>

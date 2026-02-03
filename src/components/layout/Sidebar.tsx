@@ -19,11 +19,11 @@ import {
   ChevronRight,
   X,
   GripVertical,
+  ListTodo,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
-import { getProjects, createProject } from "@/lib/database";
-import { getAllProjectsProgress } from "@/lib/database";
-import type { Project } from "@/types/database";
+import { createProject } from "@/lib/database";
+import { useSidebarStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
 import { Modal } from "@/components/ui/Modal";
 import { QuickAddTask } from "@/components/tasks/QuickAddTask";
@@ -46,50 +46,57 @@ const navItems = [
 export function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
-  const [projects, setProjects] = useState<Project[]>([]);
+
+  // Get data from store
+  const {
+    projects,
+    userProfile,
+    projectProgress,
+    loadSidebarData,
+    refreshProjects,
+    refreshProgress,
+    addProject,
+    reset
+  } = useSidebarStore();
+
+  // Local UI state
   const [projectsExpanded, setProjectsExpanded] = useState(true);
   const [showNewProject, setShowNewProject] = useState(false);
   const [newProjectName, setNewProjectName] = useState("");
   const [isCreating, setIsCreating] = useState(false);
   const [showQuickAdd, setShowQuickAdd] = useState(false);
-  const [projectProgress, setProjectProgress] = useState<Record<string, { total: number; completed: number }>>({});
-  
-  // Resizable state
-  const [width, setWidth] = useState(DEFAULT_WIDTH);
+
+  // Resizable state - read from localStorage synchronously to prevent flicker
+  const [width, setWidth] = useState(() => {
+    if (typeof window === "undefined") return DEFAULT_WIDTH;
+    const saved = localStorage.getItem("sidebar-width");
+    if (saved) {
+      const parsed = parseInt(saved, 10);
+      if (parsed >= MIN_WIDTH && parsed <= MAX_WIDTH) {
+        return parsed;
+      }
+    }
+    return DEFAULT_WIDTH;
+  });
   const [isResizing, setIsResizing] = useState(false);
   const sidebarRef = useRef<HTMLDivElement>(null);
 
-  // Track if initial load is done
-  const [isInitialized, setIsInitialized] = useState(false);
-
-  // Load width from localStorage on mount
+  // Load sidebar data once on mount
   useEffect(() => {
-    const savedWidth = localStorage.getItem("sidebar-width");
-    if (savedWidth) {
-      const parsed = parseInt(savedWidth, 10);
-      if (parsed >= MIN_WIDTH && parsed <= MAX_WIDTH) {
-        setWidth(parsed);
-        document.documentElement.style.setProperty("--sidebar-width", `${parsed}px`);
-      }
-    } else {
-      document.documentElement.style.setProperty("--sidebar-width", `${DEFAULT_WIDTH}px`);
-    }
-    setIsInitialized(true);
-  }, []);
+    loadSidebarData();
+  }, [loadSidebarData]);
 
-  // Save width to localStorage (only after initialization)
+  // Set CSS variable and save to localStorage when width changes
   useEffect(() => {
-    if (!isInitialized) return;
-    
-    localStorage.setItem("sidebar-width", width.toString());
     document.documentElement.style.setProperty("--sidebar-width", `${width}px`);
-  }, [width, isInitialized]);
+    localStorage.setItem("sidebar-width", width.toString());
+  }, [width]);
 
   // Handle resize
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
       if (!isResizing) return;
-      
+
       const newWidth = e.clientX;
       if (newWidth >= MIN_WIDTH && newWidth <= MAX_WIDTH) {
         setWidth(newWidth);
@@ -115,40 +122,25 @@ export function Sidebar() {
     };
   }, [isResizing]);
 
-  const loadProjects = async () => {
-    const data = await getProjects();
-    setProjects(data);
-  };
-
-  useEffect(() => {
-    loadProjects();
-    loadProgress();
-  }, []);
-
-  const loadProgress = async () => {
-    const progress = await getAllProjectsProgress();
-    setProjectProgress(progress);
-  };
-
-  // Listen for project updates
+  // Listen for project and task updates
   useEffect(() => {
     const handleProjectsUpdated = () => {
-      loadProjects();
-      loadProgress();
+      refreshProjects();
+      refreshProgress();
     };
 
     const handleTaskUpdated = () => {
-      loadProgress();
+      refreshProgress();
     };
 
     window.addEventListener("projectsUpdated", handleProjectsUpdated);
     window.addEventListener("taskUpdated", handleTaskUpdated);
-    
+
     return () => {
       window.removeEventListener("projectsUpdated", handleProjectsUpdated);
       window.removeEventListener("taskUpdated", handleTaskUpdated);
     };
-  }, []);
+  }, [refreshProjects, refreshProgress]);
 
   // Listen for keyboard shortcuts
   useEffect(() => {
@@ -204,7 +196,7 @@ export function Sidebar() {
     window.addEventListener("openNewTaskModal", handleOpenNewTask);
     window.addEventListener("closeModals", handleCloseModals);
     window.addEventListener("keydown", handleKeyDown);
-    
+
     return () => {
       window.removeEventListener("openNewTaskModal", handleOpenNewTask);
       window.removeEventListener("closeModals", handleCloseModals);
@@ -219,7 +211,7 @@ export function Sidebar() {
     const project = await createProject({ name: newProjectName.trim() });
 
     if (project) {
-      setProjects((prev) => [...prev, project]);
+      addProject(project);
       setNewProjectName("");
       setShowNewProject(false);
       router.push(`/projects/${project.id}`);
@@ -228,6 +220,7 @@ export function Sidebar() {
   };
 
   const handleLogout = async () => {
+    reset(); // Clear store on logout
     await supabase.auth.signOut();
     router.push("/login");
   };
@@ -241,14 +234,17 @@ export function Sidebar() {
       >
         {/* Header */}
         <div className="p-4 border-b border-white/10">
-          <h1 className="text-xl font-bold tracking-tight">STRATEGIE</h1>
+          <h1 className="text-h2 flex items-center gap-2">
+            <ListTodo className="w-5 h-5" />
+            Projekte & Aufgaben
+          </h1>
         </div>
 
         {/* Quick Add Button */}
         <div className="px-3 py-3">
           <button
             onClick={() => setShowQuickAdd(true)}
-            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-white/10 hover:bg-white/20 rounded-lg transition-colors text-sm font-medium"
+            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-white/10 hover:bg-white/20 rounded-lg transition-colors text-body-md"
           >
             <Plus className="w-4 h-4" />
             Neue Aufgabe
@@ -266,7 +262,7 @@ export function Sidebar() {
                   <Link
                     href={item.href}
                     className={cn(
-                      "flex items-center gap-3 px-3 py-2 rounded-lg transition-colors text-sm",
+                      "flex items-center gap-3 px-3 py-2 rounded-lg transition-colors text-body-lg",
                       isActive
                         ? "bg-white/15 text-white"
                         : "text-white/70 hover:bg-white/10 hover:text-white"
@@ -284,7 +280,7 @@ export function Sidebar() {
           <div className="mt-6">
             <button
               onClick={() => setProjectsExpanded(!projectsExpanded)}
-              className="flex items-center justify-between w-full px-3 py-2 text-xs font-semibold text-white/50 uppercase tracking-wider hover:text-white/70 transition-colors"
+              className="flex items-center justify-between w-full px-3 py-2 text-label-md uppercase tracking-wider text-white/50 hover:text-white/70 transition-colors"
             >
               <span>Aufgabenlisten</span>
               {projectsExpanded ? (
@@ -299,16 +295,16 @@ export function Sidebar() {
                 {projects.map((project) => {
                   const isActive = pathname === `/projects/${project.id}`;
                   const progress = projectProgress[project.id];
-                  const percentage = progress && progress.total > 0 
-                    ? Math.round((progress.completed / progress.total) * 100) 
+                  const percentage = progress && progress.total > 0
+                    ? Math.round((progress.completed / progress.total) * 100)
                     : 0;
-                  
+
                   return (
                     <li key={project.id}>
                       <Link
                         href={`/projects/${project.id}`}
                         className={cn(
-                          "flex flex-col gap-1 px-3 py-2 rounded-lg transition-colors text-sm",
+                          "flex flex-col gap-1 px-3 py-2 rounded-lg transition-colors text-body-md",
                           isActive
                             ? "bg-white/15 text-white"
                             : "text-white/70 hover:bg-white/10 hover:text-white"
@@ -321,7 +317,7 @@ export function Sidebar() {
                           />
                           <span className="truncate flex-1">{project.name}</span>
                           {progress && progress.total > 0 && (
-                            <span className="text-xs opacity-60">
+                            <span className="text-label-sm opacity-60">
                               {progress.completed}/{progress.total}
                             </span>
                           )}
@@ -340,7 +336,7 @@ export function Sidebar() {
                 })}
 
                 {projects.length === 0 && (
-                  <li className="px-3 py-2 text-sm text-white/50">
+                  <li className="px-3 py-2 text-body-md text-white/50">
                     Noch keine Listen
                   </li>
                 )}
@@ -362,7 +358,7 @@ export function Sidebar() {
                             }
                           }}
                           placeholder="Listenname..."
-                          className="flex-1 bg-white/10 border border-white/20 rounded px-2 py-1.5 text-sm text-white placeholder:text-white/50 outline-none focus:border-white/40"
+                          className="flex-1 bg-white/10 border border-white/20 rounded px-2 py-1.5 text-label-lg text-white placeholder:text-white/50 outline-none focus:border-white/40"
                           autoFocus
                         />
                         <button
@@ -379,7 +375,7 @@ export function Sidebar() {
                   ) : (
                     <button
                       onClick={() => setShowNewProject(true)}
-                      className="flex items-center gap-3 px-3 py-2 w-full rounded-lg text-white/50 hover:bg-white/10 hover:text-white transition-colors text-sm"
+                      className="flex items-center gap-3 px-3 py-2 w-full rounded-lg text-white/50 hover:bg-white/10 hover:text-white transition-colors text-body-md"
                     >
                       <Plus className="w-4 h-4" />
                       <span>Neue Liste</span>
@@ -393,9 +389,16 @@ export function Sidebar() {
 
         {/* Footer */}
         <div className="p-3 border-t border-white/10">
+          {userProfile && (
+            <div className="px-3 py-2 mb-1">
+              <span className="text-body-md text-white/80 truncate block">
+                {userProfile.full_name || userProfile.email}
+              </span>
+            </div>
+          )}
           <button
             onClick={handleLogout}
-            className="flex items-center gap-3 px-3 py-2 w-full rounded-lg text-white/70 hover:bg-white/10 hover:text-white transition-colors text-sm"
+            className="flex items-center gap-3 px-3 py-2 w-full rounded-lg text-white/70 hover:bg-white/10 hover:text-white transition-colors text-body-lg"
           >
             <LogOut className="w-4 h-4" />
             <span>Abmelden</span>

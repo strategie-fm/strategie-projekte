@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>STRATEGIE - Typografie Übersicht</title>
+  <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;500;600;700&family=Roboto:wght@400;500;600;700&family=Roboto+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --color-primary: #183c6c;
+      --color-background: #f0f0f0;
+      --color-surface: #ffffff;
+      --color-text-primary: #111827;
+      --color-text-secondary: #374151;
+      --color-text-muted: #6b7280;
+      --color-border: #e5e7eb;
+      
+      --font-heading: 'Open Sans', system-ui, sans-serif;
+      --font-body: 'Roboto', system-ui, sans-serif;
+      --font-mono: 'Roboto Mono', ui-monospace, monospace;
+    }
+    
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    
+    body {
+      font-family: var(--font-body);
+      background: var(--color-background);
+      color: var(--color-text-primary);
+      line-height: 1.6;
+      padding: 40px;
+    }
+    
+    h1 { font-family: var(--font-heading); font-size: 32px; font-weight: 700; margin-bottom: 8px; color: var(--color-primary); }
+    h2 { font-family: var(--font-heading); font-size: 20px; font-weight: 600; margin: 40px 0 20px 0; color: var(--color-primary); border-bottom: 2px solid var(--color-primary); padding-bottom: 8px; }
+    h3 { font-family: var(--font-heading); font-size: 16px; font-weight: 600; margin: 24px 0 12px 0; color: var(--color-text-secondary); }
+    .subtitle { color: var(--color-text-muted); margin-bottom: 32px; }
+    .card { background: var(--color-surface); border-radius: 12px; padding: 24px; margin-bottom: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+    
+    .font-family-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
+    .font-card { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 12px; overflow: hidden; }
+    .font-card-header { padding: 24px; background: linear-gradient(135deg, #183c6c 0%, #2a5490 100%); color: white; }
+    .font-card-header .font-name { font-size: 24px; font-weight: 700; margin-bottom: 4px; }
+    .font-card-header .font-category { font-size: 12px; opacity: 0.8; text-transform: uppercase; letter-spacing: 0.1em; }
+    .font-card-body { padding: 24px; }
+    .font-preview { font-size: 36px; margin-bottom: 16px; color: var(--color-text-primary); }
+    .font-card-body .alphabet { font-size: 14px; color: var(--color-text-muted); margin-bottom: 16px; line-height: 1.8; }
+    .font-meta { display: flex; flex-wrap: wrap; gap: 8px; }
+    .font-meta-item { font-size: 11px; padding: 4px 8px; background: #f3f4f6; border-radius: 4px; color: var(--color-text-secondary); }
+    
+    .type-scale { display: flex; flex-direction: column; gap: 0; }
+    .type-scale-item { display: grid; grid-template-columns: 200px 1fr 120px 150px; align-items: center; padding: 16px 0; border-bottom: 1px solid #f3f4f6; gap: 24px; }
+    .type-scale-item:last-child { border-bottom: none; }
+    .type-info { display: flex; flex-direction: column; gap: 2px; }
+    .type-name { font-weight: 600; font-size: 13px; color: var(--color-text-primary); }
+    .type-class { font-family: var(--font-mono); font-size: 11px; color: var(--color-primary); }
+    .type-specs { font-family: var(--font-mono); font-size: 12px; color: var(--color-text-muted); }
+    .type-usage { font-size: 12px; color: var(--color-text-muted); }
+    
+    .weight-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+    .weight-item { text-align: center; padding: 20px; background: #fafafa; border-radius: 8px; }
+    .weight-preview { font-size: 32px; margin-bottom: 8px; color: var(--color-text-primary); }
+    .weight-name { font-size: 13px; font-weight: 600; color: var(--color-text-secondary); margin-bottom: 2px; }
+    .weight-value { font-family: var(--font-mono); font-size: 12px; color: var(--color-text-muted); }
+    
+    table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    th { text-align: left; padding: 12px 16px; background: #f9fafb; border-bottom: 2px solid var(--color-border); font-weight: 600; color: var(--color-text-secondary); }
+    td { padding: 12px 16px; border-bottom: 1px solid #f3f4f6; vertical-align: middle; }
+    code { font-family: var(--font-mono); font-size: 12px; background: #f3f4f6; padding: 2px 6px; border-radius: 4px; }
+    .primary-code { color: var(--color-primary); background: #e8f0f8; }
+    
+    .usage-example { padding: 24px; background: #fafafa; border-radius: 8px; margin-top: 16px; }
+    .usage-example-title { font-weight: 600; font-size: 14px; margin-bottom: 16px; color: var(--color-text-secondary); }
+    .mono-examples { display: flex; flex-direction: column; gap: 12px; }
+    .mono-example { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; background: white; border-radius: 8px; border: 1px solid #e5e7eb; }
+    .mono-label { font-size: 13px; color: var(--color-text-muted); }
+    .mono-value { font-family: var(--font-mono); font-size: 16px; font-weight: 500; }
+    .mono-value.positive { color: #059669; }
+    .mono-value.negative { color: #dc2626; }
+    .mono-value.neutral { color: var(--color-text-primary); }
+  </style>
+</head>
+<body>
+
+  <h1>STRATEGIE Typografie</h1>
+  <p class="subtitle">Schriftsystem mit Open Sans, Roboto und Roboto Mono</p>
+
+  <h2>1. Schriftfamilien</h2>
+  <div class="font-family-grid">
+    <div class="font-card">
+      <div class="font-card-header">
+        <div class="font-name" style="font-family: 'Open Sans', sans-serif;">Open Sans</div>
+        <div class="font-category">Überschriften</div>
+      </div>
+      <div class="font-card-body">
+        <div class="font-preview" style="font-family: 'Open Sans', sans-serif; font-weight: 600;">Aa Bb Cc</div>
+        <div class="alphabet" style="font-family: 'Open Sans', sans-serif;">
+          ABCDEFGHIJKLMNOPQRSTUVWXYZ<br>
+          abcdefghijklmnopqrstuvwxyz<br>
+          0123456789
+        </div>
+        <div class="font-meta">
+          <span class="font-meta-item">Google Fonts</span>
+          <span class="font-meta-item">400, 500, 600, 700</span>
+          <span class="font-meta-item">Sans-Serif</span>
+        </div>
+      </div>
+    </div>
+    
+    <div class="font-card">
+      <div class="font-card-header">
+        <div class="font-name" style="font-family: 'Roboto', sans-serif;">Roboto</div>
+        <div class="font-category">Body Text</div>
+      </div>
+      <div class="font-card-body">
+        <div class="font-preview" style="font-family: 'Roboto', sans-serif;">Aa Bb Cc</div>
+        <div class="alphabet" style="font-family: 'Roboto', sans-serif;">
+          ABCDEFGHIJKLMNOPQRSTUVWXYZ<br>
+          abcdefghijklmnopqrstuvwxyz<br>
+          0123456789
+        </div>
+        <div class="font-meta">
+          <span class="font-meta-item">Google Fonts</span>
+          <span class="font-meta-item">400, 500, 600, 700</span>
+          <span class="font-meta-item">Sans-Serif</span>
+        </div>
+      </div>
+    </div>
+    
+    <div class="font-card">
+      <div class="font-card-header">
+        <div class="font-name" style="font-family: 'Roboto Mono', monospace;">Roboto Mono</div>
+        <div class="font-category">Zahlen & Code</div>
+      </div>
+      <div class="font-card-body">
+        <div class="font-preview" style="font-family: 'Roboto Mono', monospace;">12.345,00</div>
+        <div class="alphabet" style="font-family: 'Roboto Mono', monospace;">
+          ABCDEFGHIJKLMNOPQRSTUVWXYZ<br>
+          abcdefghijklmnopqrstuvwxyz<br>
+          0123456789 €$%
+        </div>
+        <div class="font-meta">
+          <span class="font-meta-item">Google Fonts</span>
+          <span class="font-meta-item">400, 500, 600</span>
+          <span class="font-meta-item">Monospace</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <h2>2. Typografie-Skala</h2>
+  <div class="card">
+    <div class="type-scale">
+      <div class="type-scale-item">
+        <div class="type-info">
+          <div class="type-name">Display Large</div>
+          <div class="type-class">text-display-lg</div>
+        </div>
+        <div style="font-family: 'Open Sans', sans-serif; font-size: 48px; font-weight: 700; line-height: 1.1;">Übersicht</div>
+        <div class="type-specs">48px / 700</div>
+        <div class="type-usage">Hero-Bereiche</div>
+      </div>
+      
+      <div class="type-scale-item">
+        <div class="type-info">
+          <div class="type-name">Display Medium</div>
+          <div class="type-class">text-display-md</div>
+        </div>
+        <div style="font-family: 'Open Sans', sans-serif; font-size: 36px; font-weight: 700; line-height: 1.2;">Dashboard</div>
+        <div class="type-specs">36px / 700</div>
+        <div class="type-usage">Seitentitel</div>
+      </div>
+      
+      <div class="type-scale-item">
+        <div class="type-info">
+          <div class="type-name">Heading 1</div>
+          <div class="type-class">text-h1</div>
+        </div>
+        <div style="font-family: 'Open Sans', sans-serif; font-size: 28px; font-weight: 600; line-height: 1.25;">Buchungen</div>
+        <div class="type-specs">28px / 600</div>
+        <div class="type-usage">Hauptüberschriften</div>
+      </div>
+      
+      <div class="type-scale-item">
+        <div class="type-info">
+          <div class="type-name">Heading 2</div>
+          <div class="type-class">text-h2</div>
+        </div>
+        <div style="font-family: 'Open Sans', sans-serif; font-size: 22px; font-weight: 600; line-height: 1.3;">Kategorien</div>
+        <div class="type-specs">22px / 600</div>
+        <div class="type-usage">Abschnitts-Titel</div>
+      </div>
+      
+      <div class="type-scale-item">
+        <div class="type-info">
+          <div class="type-name">Heading 3</div>
+          <div class="type-class">text-h3</div>
+        </div>
+        <div style="font-family: 'Open Sans', sans-serif; font-size: 18px; font-weight: 600; line-height: 1.4;">Card Titel</div>
+        <div class="type-specs">18px / 600</div>
+        <div class="type-usage">Card-Überschriften</div>
+      </div>
+      
+      <div class="type-scale-item">
+        <div class="type-info">
+          <div class="type-name">Heading 4</div>
+          <div class="type-class">text-h4</div>
+        </div>
+        <div style="font-family: 'Open Sans', sans-serif; font-size: 16px; font-weight: 600; line-height: 1.4;">Unterabschnitt</div>
+        <div class="type-specs">16px / 600</div>
+        <div class="type-usage">Unterabschnitte</div>
+      </div>
+      
+      <div class="type-scale-item" style="background: #f9fafb; margin: 0 -24px; padding: 16px 24px;">
+        <div class="type-info">
+          <div class="type-name">Body Large</div>
+          <div class="type-class">text-body-lg</div>
+        </div>
+        <div style="font-family: 'Roboto', sans-serif; font-size: 16px; font-weight: 400; line-height: 1.6;">Beschreibungstext für wichtige Inhalte.</div>
+        <div class="type-specs">16px / 400</div>
+        <div class="type-usage">Intro-Texte</div>
+      </div>
+      
+      <div class="type-scale-item" style="background: #f9fafb; margin: 0 -24px; padding: 16px 24px;">
+        <div class="type-info">
+          <div class="type-name">Body Medium</div>
+          <div class="type-class">text-body-md</div>
+        </div>
+        <div style="font-family: 'Roboto', sans-serif; font-size: 14px; font-weight: 400; line-height: 1.5;">Standard-Fließtext für alle UI-Elemente.</div>
+        <div class="type-specs">14px / 400</div>
+        <div class="type-usage">Standard-Text</div>
+      </div>
+      
+      <div class="type-scale-item" style="background: #f9fafb; margin: 0 -24px; padding: 16px 24px;">
+        <div class="type-info">
+          <div class="type-name">Body Small</div>
+          <div class="type-class">text-body-sm</div>
+        </div>
+        <div style="font-family: 'Roboto', sans-serif; font-size: 13px; font-weight: 400; line-height: 1.5;">Kompakter Text für Tabellen.</div>
+        <div class="type-specs">13px / 400</div>
+        <div class="type-usage">Tabellen-Text</div>
+      </div>
+      
+      <div class="type-scale-item">
+        <div class="type-info">
+          <div class="type-name">Label Large</div>
+          <div class="type-class">text-label-lg</div>
+        </div>
+        <div style="font-family: 'Roboto', sans-serif; font-size: 14px; font-weight: 500; line-height: 1.4;">Formular Label</div>
+        <div class="type-specs">14px / 500</div>
+        <div class="type-usage">Input Labels</div>
+      </div>
+      
+      <div class="type-scale-item">
+        <div class="type-info">
+          <div class="type-name">Label Medium</div>
+          <div class="type-class">text-label-md</div>
+        </div>
+        <div style="font-family: 'Roboto', sans-serif; font-size: 12px; font-weight: 500; line-height: 1.4;">BADGE TEXT</div>
+        <div class="type-specs">12px / 500</div>
+        <div class="type-usage">Badges, Tags</div>
+      </div>
+      
+      <div class="type-scale-item">
+        <div class="type-info">
+          <div class="type-name">Caption</div>
+          <div class="type-class">text-caption</div>
+        </div>
+        <div style="font-family: 'Roboto', sans-serif; font-size: 12px; font-weight: 400; line-height: 1.4; color: #6b7280;">Hilfetext unter Eingabefeldern</div>
+        <div class="type-specs">12px / 400</div>
+        <div class="type-usage">Hilfetexte</div>
+      </div>
+    </div>
+  </div>
+
+  <h2>3. Schriftgewichte</h2>
+  <div class="card">
+    <h3>Open Sans (Überschriften)</h3>
+    <div class="weight-grid" style="margin-top: 16px;">
+      <div class="weight-item">
+        <div class="weight-preview" style="font-family: 'Open Sans', sans-serif; font-weight: 400;">Aa</div>
+        <div class="weight-name">Regular</div>
+        <div class="weight-value">400</div>
+      </div>
+      <div class="weight-item">
+        <div class="weight-preview" style="font-family: 'Open Sans', sans-serif; font-weight: 500;">Aa</div>
+        <div class="weight-name">Medium</div>
+        <div class="weight-value">500</div>
+      </div>
+      <div class="weight-item">
+        <div class="weight-preview" style="font-family: 'Open Sans', sans-serif; font-weight: 600;">Aa</div>
+        <div class="weight-name">Semibold</div>
+        <div class="weight-value">600</div>
+      </div>
+      <div class="weight-item">
+        <div class="weight-preview" style="font-family: 'Open Sans', sans-serif; font-weight: 700;">Aa</div>
+        <div class="weight-name">Bold</div>
+        <div class="weight-value">700</div>
+      </div>
+    </div>
+    
+    <h3>Roboto (Body Text)</h3>
+    <div class="weight-grid" style="margin-top: 16px;">
+      <div class="weight-item">
+        <div class="weight-preview" style="font-family: 'Roboto', sans-serif; font-weight: 400;">Aa</div>
+        <div class="weight-name">Regular</div>
+        <div class="weight-value">400</div>
+      </div>
+      <div class="weight-item">
+        <div class="weight-preview" style="font-family: 'Roboto', sans-serif; font-weight: 500;">Aa</div>
+        <div class="weight-name">Medium</div>
+        <div class="weight-value">500</div>
+      </div>
+      <div class="weight-item">
+        <div class="weight-preview" style="font-family: 'Roboto', sans-serif; font-weight: 600;">Aa</div>
+        <div class="weight-name">Semibold</div>
+        <div class="weight-value">600</div>
+      </div>
+      <div class="weight-item">
+        <div class="weight-preview" style="font-family: 'Roboto', sans-serif; font-weight: 700;">Aa</div>
+        <div class="weight-name">Bold</div>
+        <div class="weight-value">700</div>
+      </div>
+    </div>
+    
+    <h3>Roboto Mono (Zahlen)</h3>
+    <div class="weight-grid" style="margin-top: 16px;">
+      <div class="weight-item">
+        <div class="weight-preview" style="font-family: 'Roboto Mono', monospace; font-weight: 400;">123</div>
+        <div class="weight-name">Regular</div>
+        <div class="weight-value">400</div>
+      </div>
+      <div class="weight-item">
+        <div class="weight-preview" style="font-family: 'Roboto Mono', monospace; font-weight: 500;">123</div>
+        <div class="weight-name">Medium</div>
+        <div class="weight-value">500</div>
+      </div>
+      <div class="weight-item">
+        <div class="weight-preview" style="font-family: 'Roboto Mono', monospace; font-weight: 600;">123</div>
+        <div class="weight-name">Semibold</div>
+        <div class="weight-value">600</div>
+      </div>
+    </div>
+  </div>
+
+  <h2>4. Zeilenhöhen</h2>
+  <div class="card">
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Wert</th>
+          <th>CSS Variable</th>
+          <th>Tailwind</th>
+          <th>Verwendung</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>None</td>
+          <td><code>1</code></td>
+          <td><code>--leading-none</code></td>
+          <td><code class="primary-code">leading-none</code></td>
+          <td>Einzeilige Elemente</td>
+        </tr>
+        <tr>
+          <td>Tight</td>
+          <td><code>1.25</code></td>
+          <td><code>--leading-tight</code></td>
+          <td><code class="primary-code">leading-tight</code></td>
+          <td>Überschriften</td>
+        </tr>
+        <tr>
+          <td>Snug</td>
+          <td><code>1.375</code></td>
+          <td><code>--leading-snug</code></td>
+          <td><code class="primary-code">leading-snug</code></td>
+          <td>Kompakte Absätze</td>
+        </tr>
+        <tr>
+          <td>Normal</td>
+          <td><code>1.5</code></td>
+          <td><code>--leading-normal</code></td>
+          <td><code class="primary-code">leading-normal</code></td>
+          <td>Body Text, UI-Elemente</td>
+        </tr>
+        <tr>
+          <td>Relaxed</td>
+          <td><code>1.625</code></td>
+          <td><code>--leading-relaxed</code></td>
+          <td><code class="primary-code">leading-relaxed</code></td>
+          <td>Längere Beschreibungen</td>
+        </tr>
+        <tr>
+          <td>Loose</td>
+          <td><code>1.75</code></td>
+          <td><code>--leading-loose</code></td>
+          <td><code class="primary-code">leading-loose</code></td>
+          <td>Hilfe-Texte, Dokumentation</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2>5. Monospace für Zahlen</h2>
+  <div class="card">
+    <p style="margin-bottom: 16px; color: #6b7280;">Roboto Mono wird für alle Beträge, Zahlen und Codes verwendet, um gleichmäßige Ausrichtung zu gewährleisten.</p>
+    
+    <div class="usage-example">
+      <div class="usage-example-title">Beträge in der Buchungsliste</div>
+      <div class="mono-examples">
+        <div class="mono-example">
+          <span class="mono-label">Einnahme</span>
+          <span class="mono-value positive">+5.640,00 €</span>
+        </div>
+        <div class="mono-example">
+          <span class="mono-label">Ausgabe</span>
+          <span class="mono-value negative">-2.280,00 €</span>
+        </div>
+        <div class="mono-example">
+          <span class="mono-label">Umbuchung</span>
+          <span class="mono-value neutral">±500,00 €</span>
+        </div>
+        <div class="mono-example">
+          <span class="mono-label">Gesamtsaldo</span>
+          <span class="mono-value neutral" style="font-size: 24px; font-weight: 600;">12.450,00 €</span>
+        </div>
+      </div>
+    </div>
+    
+    <div class="usage-example">
+      <div class="usage-example-title">Weitere Anwendungen</div>
+      <div class="mono-examples">
+        <div class="mono-example">
+          <span class="mono-label">Datum</span>
+          <span class="mono-value neutral" style="font-size: 14px;">25.01.2026</span>
+        </div>
+        <div class="mono-example">
+          <span class="mono-label">Prozent</span>
+          <span class="mono-value positive" style="font-size: 14px;">+12,5%</span>
+        </div>
+        <div class="mono-example">
+          <span class="mono-label">ID</span>
+          <span class="mono-value neutral" style="font-size: 12px; color: #6b7280;">TX-2026-00142</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <h2>6. Vollständige Übersicht (Tabelle)</h2>
+  <div class="card">
+    <table>
+      <thead>
+        <tr>
+          <th>Element</th>
+          <th>Schriftart</th>
+          <th>Größe</th>
+          <th>Gewicht</th>
+          <th>Zeilenhöhe</th>
+          <th>CSS Klasse</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Display Large</td>
+          <td>Open Sans</td>
+          <td>48px</td>
+          <td>700</td>
+          <td>1.1</td>
+          <td><code class="primary-code">text-display-lg</code></td>
+        </tr>
+        <tr>
+          <td>Display Medium</td>
+          <td>Open Sans</td>
+          <td>36px</td>
+          <td>700</td>
+          <td>1.2</td>
+          <td><code class="primary-code">text-display-md</code></td>
+        </tr>
+        <tr>
+          <td>Heading 1</td>
+          <td>Open Sans</td>
+          <td>28px</td>
+          <td>600</td>
+          <td>1.25</td>
+          <td><code class="primary-code">text-h1</code></td>
+        </tr>
+        <tr>
+          <td>Heading 2</td>
+          <td>Open Sans</td>
+          <td>22px</td>
+          <td>600</td>
+          <td>1.3</td>
+          <td><code class="primary-code">text-h2</code></td>
+        </tr>
+        <tr>
+          <td>Heading 3</td>
+          <td>Open Sans</td>
+          <td>18px</td>
+          <td>600</td>
+          <td>1.4</td>
+          <td><code class="primary-code">text-h3</code></td>
+        </tr>
+        <tr>
+          <td>Heading 4</td>
+          <td>Open Sans</td>
+          <td>16px</td>
+          <td>600</td>
+          <td>1.4</td>
+          <td><code class="primary-code">text-h4</code></td>
+        </tr>
+        <tr style="background: #f9fafb;">
+          <td>Body Large</td>
+          <td>Roboto</td>
+          <td>16px</td>
+          <td>400</td>
+          <td>1.6</td>
+          <td><code class="primary-code">text-body-lg</code></td>
+        </tr>
+        <tr style="background: #f9fafb;">
+          <td>Body Medium</td>
+          <td>Roboto</td>
+          <td>14px</td>
+          <td>400</td>
+          <td>1.5</td>
+          <td><code class="primary-code">text-body-md</code></td>
+        </tr>
+        <tr style="background: #f9fafb;">
+          <td>Body Small</td>
+          <td>Roboto</td>
+          <td>13px</td>
+          <td>400</td>
+          <td>1.5</td>
+          <td><code class="primary-code">text-body-sm</code></td>
+        </tr>
+        <tr>
+          <td>Label Large</td>
+          <td>Roboto</td>
+          <td>14px</td>
+          <td>500</td>
+          <td>1.4</td>
+          <td><code class="primary-code">text-label-lg</code></td>
+        </tr>
+        <tr>
+          <td>Label Medium</td>
+          <td>Roboto</td>
+          <td>12px</td>
+          <td>500</td>
+          <td>1.4</td>
+          <td><code class="primary-code">text-label-md</code></td>
+        </tr>
+        <tr>
+          <td>Label Small</td>
+          <td>Roboto</td>
+          <td>11px</td>
+          <td>500</td>
+          <td>1.4</td>
+          <td><code class="primary-code">text-label-sm</code></td>
+        </tr>
+        <tr>
+          <td>Caption</td>
+          <td>Roboto</td>
+          <td>12px</td>
+          <td>400</td>
+          <td>1.4</td>
+          <td><code class="primary-code">text-caption</code></td>
+        </tr>
+        <tr style="background: #f9fafb;">
+          <td>Amount Large</td>
+          <td>Roboto Mono</td>
+          <td>24px</td>
+          <td>600</td>
+          <td>1.2</td>
+          <td><code class="primary-code">text-amount-lg</code></td>
+        </tr>
+        <tr style="background: #f9fafb;">
+          <td>Amount Medium</td>
+          <td>Roboto Mono</td>
+          <td>18px</td>
+          <td>500</td>
+          <td>1.3</td>
+          <td><code class="primary-code">text-amount-md</code></td>
+        </tr>
+        <tr style="background: #f9fafb;">
+          <td>Amount Small</td>
+          <td>Roboto Mono</td>
+          <td>14px</td>
+          <td>500</td>
+          <td>1.4</td>
+          <td><code class="primary-code">text-amount-sm</code></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2>7. CSS Variables (Zum Kopieren)</h2>
+  <div class="card">
+    <pre style="background: #1f2937; color: #e5e7eb; padding: 20px; border-radius: 8px; overflow-x: auto; font-size: 13px; line-height: 1.6;">
+/* ============================================
+   FONT IMPORTS
+   ============================================ */
+@import url('https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;500;600;700&family=Roboto:wght@400;500;600;700&family=Roboto+Mono:wght@400;500;600&display=swap');
+
+:root {
+  /* ============================================
+     FONT FAMILIES
+     ============================================ */
+  --font-heading: 'Open Sans', system-ui, sans-serif;
+  --font-body: 'Roboto', system-ui, sans-serif;
+  --font-mono: 'Roboto Mono', ui-monospace, monospace;
+  
+  /* ============================================
+     FONT SIZES
+     ============================================ */
+  --text-display-lg: 3rem;      /* 48px */
+  --text-display-md: 2.25rem;   /* 36px */
+  --text-h1: 1.75rem;           /* 28px */
+  --text-h2: 1.375rem;          /* 22px */
+  --text-h3: 1.125rem;          /* 18px */
+  --text-h4: 1rem;              /* 16px */
+  --text-body-lg: 1rem;         /* 16px */
+  --text-body-md: 0.875rem;     /* 14px */
+  --text-body-sm: 0.8125rem;    /* 13px */
+  --text-label-lg: 0.875rem;    /* 14px */
+  --text-label-md: 0.75rem;     /* 12px */
+  --text-label-sm: 0.6875rem;   /* 11px */
+  --text-caption: 0.75rem;      /* 12px */
+  --text-amount-lg: 1.5rem;     /* 24px */
+  --text-amount-md: 1.125rem;   /* 18px */
+  --text-amount-sm: 0.875rem;   /* 14px */
+  
+  /* ============================================
+     FONT WEIGHTS
+     ============================================ */
+  --font-regular: 400;
+  --font-medium: 500;
+  --font-semibold: 600;
+  --font-bold: 700;
+  
+  /* ============================================
+     LINE HEIGHTS
+     ============================================ */
+  --leading-none: 1;
+  --leading-tight: 1.25;
+  --leading-snug: 1.375;
+  --leading-normal: 1.5;
+  --leading-relaxed: 1.625;
+  --leading-loose: 1.75;
+  
+  /* ============================================
+     LETTER SPACING
+     ============================================ */
+  --tracking-tighter: -0.05em;
+  --tracking-tight: -0.025em;
+  --tracking-normal: 0;
+  --tracking-wide: 0.025em;
+  --tracking-wider: 0.05em;
+  --tracking-widest: 0.1em;
+}
+    </pre>
+  </div>
+
+</body>
+</html>
