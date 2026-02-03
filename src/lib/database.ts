@@ -354,9 +354,15 @@ export async function updateTask(
   id: string,
   updates: Partial<Pick<Task, "title" | "description" | "status" | "priority" | "due_date" | "completed_at" | "position" | "section_id">>
 ): Promise<Task | null> {
+  const { data: { user } } = await supabase.auth.getUser();
+  
   const { data, error } = await supabase
     .from("tasks")
-    .update({ ...updates, updated_at: new Date().toISOString() })
+    .update({ 
+      ...updates, 
+      updated_at: new Date().toISOString(),
+      updated_by: user?.id || null,
+    })
     .eq("id", id)
     .select()
     .single();
@@ -800,9 +806,15 @@ export async function deleteSection(id: string): Promise<boolean> {
 }
 
 export async function moveTaskToSection(taskId: string, sectionId: string | null): Promise<boolean> {
+  const { data: { user } } = await supabase.auth.getUser();
+  
   const { error } = await supabase
     .from("tasks")
-    .update({ section_id: sectionId, updated_at: new Date().toISOString() })
+    .update({ 
+      section_id: sectionId,
+      updated_at: new Date().toISOString(),
+      updated_by: user?.id || null,
+    })
     .eq("id", taskId);
 
   if (error) {
