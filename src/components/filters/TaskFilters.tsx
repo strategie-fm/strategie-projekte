@@ -9,6 +9,7 @@ export interface TaskFilterState {
   priorities: string[];
   labels: string[];
   status: string[];
+  assignees?: string[];
 }
 
 interface TaskFiltersProps {
@@ -181,9 +182,10 @@ export function TaskFilters({ filters, onFiltersChange, availableLabels }: TaskF
 }
 
 // Helper function to filter tasks
-export function filterTasks<T extends { priority: string; status: string; labels?: { id: string }[] }>(
+export function filterTasks<T extends { id: string; priority: string; status: string; labels?: { id: string }[] }>(
   tasks: T[],
-  filters: TaskFilterState
+  filters: TaskFilterState,
+  taskAssigneeMap?: Record<string, string[]>
 ): T[] {
   return tasks.filter((task) => {
     // Priority filter
@@ -201,6 +203,15 @@ export function filterTasks<T extends { priority: string; status: string; labels
       const taskLabelIds = task.labels?.map((l) => l.id) || [];
       const hasMatchingLabel = filters.labels.some((labelId) => taskLabelIds.includes(labelId));
       if (!hasMatchingLabel) {
+        return false;
+      }
+    }
+
+    // Assignee filter
+    if (filters.assignees && filters.assignees.length > 0 && taskAssigneeMap) {
+      const taskAssignees = taskAssigneeMap[task.id] || [];
+      const hasMatchingAssignee = filters.assignees.some((userId) => taskAssignees.includes(userId));
+      if (!hasMatchingAssignee) {
         return false;
       }
     }

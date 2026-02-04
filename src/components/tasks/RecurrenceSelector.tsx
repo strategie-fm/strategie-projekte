@@ -192,7 +192,7 @@ export function RecurrenceSelector({ taskId, dueDate, onRecurrenceChange }: Recu
 
   if (loading) {
     return (
-      <div className="flex items-center gap-2 text-text-muted text-sm">
+      <div className="flex items-center gap-2 text-text-muted" style={{ fontSize: "0.875rem", lineHeight: 1.5 }}>
         <RotateCcw className="w-4 h-4 animate-spin" />
         <span>Laden...</span>
       </div>
@@ -205,15 +205,16 @@ export function RecurrenceSelector({ taskId, dueDate, onRecurrenceChange }: Recu
       <button
         onClick={() => setIsOpen(!isOpen)}
         className={cn(
-          "flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors",
-          recurrence 
-            ? "bg-primary-surface text-primary" 
+          "w-full h-10 flex items-center gap-2 px-3 rounded-lg transition-colors",
+          recurrence
+            ? "bg-primary-surface text-primary"
             : "bg-divider text-text-secondary hover:bg-border"
         )}
+        style={{ fontSize: "0.875rem", lineHeight: 1.5 }}
       >
-        <RotateCcw className="w-4 h-4" />
-        <span>{recurrence ? getRecurrenceLabel() : "Wiederholung"}</span>
-        <ChevronDown className="w-4 h-4" />
+        <RotateCcw className="w-4 h-4 flex-shrink-0" />
+        <span className="flex-1 text-left truncate">{recurrence ? getRecurrenceLabel() : "Keine"}</span>
+        <ChevronDown className="w-4 h-4 flex-shrink-0" />
       </button>
 
       {/* Dropdown */}
@@ -229,11 +230,12 @@ export function RecurrenceSelector({ taskId, dueDate, onRecurrenceChange }: Recu
                 key={option.value}
                 onClick={() => handleSelectType(option.value)}
                 className={cn(
-                  "w-full px-4 py-2 text-left text-sm hover:bg-divider transition-colors flex items-center justify-between",
+                  "w-full px-4 py-2 text-left hover:bg-divider transition-colors flex items-center justify-between",
                   isOptionSelected(option.value)
                     ? "bg-primary-surface text-primary"
                     : "text-text-primary"
                 )}
+                style={{ fontSize: "0.875rem", lineHeight: 1.5 }}
               >
                 {option.label}
                 {isOptionSelected(option.value) && (
@@ -262,7 +264,7 @@ export function RecurrenceSelector({ taskId, dueDate, onRecurrenceChange }: Recu
             <div className="space-y-4">
               {/* Interval */}
               <div>
-                <label className="block text-sm font-medium text-text-secondary mb-2">
+                <label className="block font-medium text-text-secondary mb-2" style={{ fontSize: "0.875rem", lineHeight: 1.5 }}>
                   Wiederholen alle
                 </label>
                 <div className="flex items-center gap-2">
@@ -272,12 +274,14 @@ export function RecurrenceSelector({ taskId, dueDate, onRecurrenceChange }: Recu
                     max="99"
                     value={customInterval}
                     onChange={(e) => setCustomInterval(Math.max(1, parseInt(e.target.value) || 1))}
-                    className="w-20 px-3 py-2 rounded-lg border border-border bg-surface text-sm"
+                    className="w-20 px-3 py-2 rounded-lg border border-border bg-surface"
+                    style={{ fontSize: "0.875rem", lineHeight: 1.5 }}
                   />
                   <select
                     value={customType}
                     onChange={(e) => setCustomType(e.target.value as RecurrenceType)}
-                    className="flex-1 px-3 py-2 rounded-lg border border-border bg-surface text-sm"
+                    className="flex-1 px-3 py-2 rounded-lg border border-border bg-surface"
+                    style={{ fontSize: "0.875rem", lineHeight: 1.5 }}
                   >
                     <option value="daily">Tag(e)</option>
                     <option value="weekly">Woche(n)</option>
@@ -290,7 +294,7 @@ export function RecurrenceSelector({ taskId, dueDate, onRecurrenceChange }: Recu
               {/* Weekdays (for weekly) */}
               {customType === "weekly" && (
                 <div>
-                  <label className="block text-sm font-medium text-text-secondary mb-2">
+                  <label className="block font-medium text-text-secondary mb-2" style={{ fontSize: "0.875rem", lineHeight: 1.5 }}>
                     An diesen Tagen
                   </label>
                   <div className="flex gap-1">
@@ -299,11 +303,12 @@ export function RecurrenceSelector({ taskId, dueDate, onRecurrenceChange }: Recu
                         key={day.value}
                         onClick={() => toggleWeekday(day.value)}
                         className={cn(
-                          "w-9 h-9 rounded-lg text-sm font-medium transition-colors",
+                          "w-9 h-9 rounded-lg font-medium transition-colors",
                           customWeekdays.includes(day.value)
                             ? "bg-primary text-white"
                             : "bg-divider text-text-secondary hover:bg-border"
                         )}
+                        style={{ fontSize: "0.875rem", lineHeight: 1.5 }}
                       >
                         {day.label}
                       </button>
@@ -315,13 +320,14 @@ export function RecurrenceSelector({ taskId, dueDate, onRecurrenceChange }: Recu
               {/* Month day (for monthly) */}
               {customType === "monthly" && (
                 <div>
-                  <label className="block text-sm font-medium text-text-secondary mb-2">
+                  <label className="block font-medium text-text-secondary mb-2" style={{ fontSize: "0.875rem", lineHeight: 1.5 }}>
                     Am Tag des Monats
                   </label>
                   <select
                     value={customMonthDay}
                     onChange={(e) => setCustomMonthDay(parseInt(e.target.value))}
-                    className="w-full px-3 py-2 rounded-lg border border-border bg-surface text-sm"
+                    className="w-full px-3 py-2 rounded-lg border border-border bg-surface"
+                    style={{ fontSize: "0.875rem", lineHeight: 1.5 }}
                   >
                     {Array.from({ length: 31 }, (_, i) => i + 1).map((day) => (
                       <option key={day} value={day}>
@@ -335,7 +341,7 @@ export function RecurrenceSelector({ taskId, dueDate, onRecurrenceChange }: Recu
 
               {/* End condition */}
               <div>
-                <label className="block text-sm font-medium text-text-secondary mb-2">
+                <label className="block font-medium text-text-secondary mb-2" style={{ fontSize: "0.875rem", lineHeight: 1.5 }}>
                   Endet
                 </label>
                 <div className="space-y-2">
@@ -347,7 +353,7 @@ export function RecurrenceSelector({ taskId, dueDate, onRecurrenceChange }: Recu
                       onChange={() => { setCustomEndDate(""); setCustomEndAfter(null); }}
                       className="text-primary"
                     />
-                    <span className="text-sm text-text-primary">Nie</span>
+                    <span className="text-text-primary" style={{ fontSize: "0.875rem", lineHeight: 1.5 }}>Nie</span>
                   </label>
                   <label className="flex items-center gap-2">
                     <input
@@ -357,13 +363,14 @@ export function RecurrenceSelector({ taskId, dueDate, onRecurrenceChange }: Recu
                       onChange={() => { setCustomEndAfter(null); setCustomEndDate(new Date().toISOString().split("T")[0]); }}
                       className="text-primary"
                     />
-                    <span className="text-sm text-text-primary">Am</span>
+                    <span className="text-text-primary" style={{ fontSize: "0.875rem", lineHeight: 1.5 }}>Am</span>
                     {customEndDate && (
                       <input
                         type="date"
                         value={customEndDate}
                         onChange={(e) => setCustomEndDate(e.target.value)}
-                        className="px-2 py-1 rounded border border-border bg-surface text-sm"
+                        className="px-2 py-1 rounded border border-border bg-surface"
+                        style={{ fontSize: "0.875rem", lineHeight: 1.5 }}
                       />
                     )}
                   </label>
@@ -375,7 +382,7 @@ export function RecurrenceSelector({ taskId, dueDate, onRecurrenceChange }: Recu
                       onChange={() => { setCustomEndDate(""); setCustomEndAfter(10); }}
                       className="text-primary"
                     />
-                    <span className="text-sm text-text-primary">Nach</span>
+                    <span className="text-text-primary" style={{ fontSize: "0.875rem", lineHeight: 1.5 }}>Nach</span>
                     {customEndAfter && (
                       <>
                         <input
@@ -384,9 +391,10 @@ export function RecurrenceSelector({ taskId, dueDate, onRecurrenceChange }: Recu
                           max="999"
                           value={customEndAfter}
                           onChange={(e) => setCustomEndAfter(Math.max(1, parseInt(e.target.value) || 1))}
-                          className="w-16 px-2 py-1 rounded border border-border bg-surface text-sm"
+                          className="w-16 px-2 py-1 rounded border border-border bg-surface"
+                          style={{ fontSize: "0.875rem", lineHeight: 1.5 }}
                         />
-                        <span className="text-sm text-text-primary">Wiederholungen</span>
+                        <span className="text-text-primary" style={{ fontSize: "0.875rem", lineHeight: 1.5 }}>Wiederholungen</span>
                       </>
                     )}
                   </label>
@@ -398,6 +406,7 @@ export function RecurrenceSelector({ taskId, dueDate, onRecurrenceChange }: Recu
               <button
                 onClick={() => setShowCustom(false)}
                 className="px-4 py-2 rounded-lg border border-border text-text-secondary hover:bg-divider transition-colors"
+                style={{ fontSize: "0.875rem", lineHeight: 1.5 }}
               >
                 Abbrechen
               </button>
@@ -405,6 +414,7 @@ export function RecurrenceSelector({ taskId, dueDate, onRecurrenceChange }: Recu
                 onClick={handleSaveCustom}
                 disabled={customType === "weekly" && customWeekdays.length === 0}
                 className="px-4 py-2 rounded-lg bg-primary text-white hover:bg-primary-dark transition-colors disabled:opacity-50"
+                style={{ fontSize: "0.875rem", lineHeight: 1.5 }}
               >
                 Speichern
               </button>

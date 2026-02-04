@@ -57,13 +57,14 @@ export function LabelSelector({ taskId, onLabelsChange }: LabelSelectorProps) {
 
   const handleToggleLabel = async (label: Label) => {
     const isSelected = taskLabels.some(l => l.id === label.id);
-    
+
     if (isSelected) {
       const success = await removeLabelFromTask(taskId, label.id);
       if (success) {
         const updated = taskLabels.filter(l => l.id !== label.id);
         setTaskLabels(updated);
         onLabelsChange?.(updated);
+        window.dispatchEvent(new CustomEvent("taskLabelsChanged", { detail: taskId }));
       }
     } else {
       const success = await addLabelToTask(taskId, label.id);
@@ -71,6 +72,7 @@ export function LabelSelector({ taskId, onLabelsChange }: LabelSelectorProps) {
         const updated = [...taskLabels, label];
         setTaskLabels(updated);
         onLabelsChange?.(updated);
+        window.dispatchEvent(new CustomEvent("taskLabelsChanged", { detail: taskId }));
       }
     }
   };
@@ -94,6 +96,7 @@ export function LabelSelector({ taskId, onLabelsChange }: LabelSelectorProps) {
       const updated = [...taskLabels, label];
       setTaskLabels(updated);
       onLabelsChange?.(updated);
+      window.dispatchEvent(new CustomEvent("taskLabelsChanged", { detail: taskId }));
     }
     setIsCreating(false);
   };
@@ -128,7 +131,7 @@ export function LabelSelector({ taskId, onLabelsChange }: LabelSelectorProps) {
           taskLabels.map((label) => (
             <span
               key={label.id}
-              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium text-white"
+              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-body-md font-medium text-white"
               style={{ backgroundColor: label.color }}
             >
               {label.name}
@@ -162,13 +165,15 @@ export function LabelSelector({ taskId, onLabelsChange }: LabelSelectorProps) {
                       key={label.id}
                       onClick={() => handleToggleLabel(label)}
                       className={cn(
-                        "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium transition-all",
+                        "inline-flex items-center gap-1 px-2.5 py-1 rounded-lg transition-all",
                         isSelected
                           ? "text-white ring-2 ring-offset-1"
                           : "text-white opacity-60 hover:opacity-100"
                       )}
-                      style={{ 
+                      style={{
                         backgroundColor: label.color,
+                        fontSize: "0.875rem",
+                        lineHeight: 1.5,
                       }}
                     >
                       {isSelected && <Check className="w-3 h-3" />}

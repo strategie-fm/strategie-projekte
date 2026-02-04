@@ -45,7 +45,7 @@ const config: Config = {
           disabled: "#9ca3af",
         },
         border: {
-          DEFAULT: "#e5e7eb",
+          DEFAULT: "#d2d2d2",
           focus: "#183c6c",
         },
         divider: "#f3f4f6",

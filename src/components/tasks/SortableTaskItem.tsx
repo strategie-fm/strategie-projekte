@@ -223,7 +223,7 @@ export function SortableTaskItem({
         <div className="flex items-center gap-2">
           <span
             className={cn(
-              "text-sm font-medium",
+              "text-body-md",
               isCompleted ? "text-text-muted line-through" : "text-text-primary"
             )}
           >
@@ -233,7 +233,7 @@ export function SortableTaskItem({
 
         {/* Description Preview */}
         {hasDescription && !isCompleted && (
-          <p className="text-xs text-text-muted mt-0.5 line-clamp-1">
+          <p className="text-caption mt-0.5 line-clamp-1">
             {task.description}
           </p>
         )}
@@ -244,8 +244,8 @@ export function SortableTaskItem({
           {dueInfo && (
             <span
               className={cn(
-                "text-xs",
-                dueInfo.isOverdue && !isCompleted ? "text-error font-medium" : "text-text-muted"
+                "text-label-md",
+                dueInfo.isOverdue && !isCompleted ? "text-error" : "text-text-muted"
               )}
             >
               {dueInfo.text}
@@ -254,7 +254,7 @@ export function SortableTaskItem({
 
           {/* Project */}
           {showProject && task.projects && task.projects.length > 0 && (
-            <span className="flex items-center gap-1 text-xs text-text-muted">
+            <span className="flex items-center gap-1 text-label-md text-text-muted">
               <span
                 className="w-2 h-2 rounded-sm"
                 style={{ backgroundColor: task.projects[0].color }}
@@ -265,7 +265,7 @@ export function SortableTaskItem({
 
           {/* Subtask Counter */}
           {subtaskCount && subtaskCount.total > 0 && (
-            <span className="flex items-center gap-1 text-xs text-text-muted">
+            <span className="flex items-center gap-1 text-label-md text-text-muted">
               <ListTodo className="w-3 h-3" />
               {subtaskCount.completed}/{subtaskCount.total}
             </span>
@@ -282,7 +282,7 @@ export function SortableTaskItem({
           {task.priority !== "p4" && (
             <span
               className={cn(
-                "px-1.5 py-0.5 rounded text-[10px] font-medium",
+                "px-1.5 py-0.5 rounded text-label-sm",
                 priorityBadgeColors[task.priority]
               )}
             >
@@ -305,7 +305,7 @@ export function SortableTaskItem({
                 ) : (
                   <div
                     key={assignee.user_id}
-                    className="w-5 h-5 rounded-full bg-primary text-white text-[10px] font-medium flex items-center justify-center border border-surface"
+                    className="w-5 h-5 rounded-full bg-primary text-white text-label-sm flex items-center justify-center border border-surface"
                     title={assignee.profile?.full_name || assignee.profile?.email}
                   >
                     {getInitials(
@@ -316,7 +316,7 @@ export function SortableTaskItem({
                 )
               ))}
               {assignees.length > 3 && (
-                <div className="w-5 h-5 rounded-full bg-divider text-text-muted text-[10px] font-medium flex items-center justify-center border border-surface">
+                <div className="w-5 h-5 rounded-full bg-divider text-text-muted text-label-sm flex items-center justify-center border border-surface">
                   +{assignees.length - 3}
                 </div>
               )}
@@ -327,14 +327,14 @@ export function SortableTaskItem({
           {labels.slice(0, 2).map((label) => (
             <span
               key={label.id}
-              className="px-1.5 py-0.5 rounded-full text-[10px] font-medium text-white"
+              className="px-1.5 py-0.5 rounded-full text-label-sm text-white"
               style={{ backgroundColor: label.color }}
             >
               {label.name}
             </span>
           ))}
           {labels.length > 2 && (
-            <span className="text-[10px] text-text-muted">
+            <span className="text-label-sm text-text-muted">
               +{labels.length - 2}
             </span>
           )}

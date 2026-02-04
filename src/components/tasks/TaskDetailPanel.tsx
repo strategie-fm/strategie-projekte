@@ -241,7 +241,10 @@ export function TaskDetailPanel({
                     setDueDate(e.target.value);
                     if (task) {
                       updateTask(task.id, { due_date: e.target.value || null }).then((updated) => {
-                        if (updated) onUpdate({ ...task, ...updated });
+                        if (updated) {
+                          onUpdate({ ...task, ...updated });
+                          window.dispatchEvent(new CustomEvent("taskDateChanged", { detail: task.id }));
+                        }
                       });
                     }
                   }}
