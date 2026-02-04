@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import { Calendar, Trash2, Folder, RotateCcw, PlayCircle, Flag, ListTodo, MessageSquare } from "lucide-react";
+import { Calendar, Trash2, Folder, RotateCcw, PlayCircle, Flag, ListTodo, MessageSquare, X } from "lucide-react";
 import { updateTask, deleteTask, completeRecurringTask, getTaskRecurrence, getSubtasks, getComments } from "@/lib/database";
 import type { TaskRecurrence } from "@/types/database";
 import { SubtaskList } from "./SubtaskList";
@@ -23,6 +23,7 @@ interface TaskDetailViewProps {
   task: TaskWithRelations | null;
   onUpdate: (task: TaskWithRelations) => void;
   onDelete: (taskId: string) => void;
+  onClose?: () => void;
   onNewRecurringTask?: (task: TaskWithRelations) => void;
 }
 
@@ -30,6 +31,7 @@ export function TaskDetailView({
   task,
   onUpdate,
   onDelete,
+  onClose,
   onNewRecurringTask,
 }: TaskDetailViewProps) {
   const [title, setTitle] = useState("");
@@ -217,32 +219,46 @@ export function TaskDetailView({
             style={{ fontSize: "1.375rem", lineHeight: "40px" }}
           />
 
-          {/* Delete Button */}
-          {showDeleteConfirm ? (
-            <div className="flex items-center gap-2">
+          {/* Action Buttons */}
+          <div className="flex items-center gap-1">
+            {/* Delete Button */}
+            {showDeleteConfirm ? (
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handleDelete}
+                  disabled={isDeleting}
+                  className="px-2 py-1 text-label-md font-medium bg-error text-white rounded-lg hover:bg-error/90 disabled:opacity-50"
+                >
+                  {isDeleting ? "..." : "Ja"}
+                </button>
+                <button
+                  onClick={() => setShowDeleteConfirm(false)}
+                  className="px-2 py-1 text-label-md text-text-muted hover:text-text-primary"
+                >
+                  Nein
+                </button>
+              </div>
+            ) : (
               <button
-                onClick={handleDelete}
-                disabled={isDeleting}
-                className="px-2 py-1 text-label-md font-medium bg-error text-white rounded-lg hover:bg-error/90 disabled:opacity-50"
+                onClick={() => setShowDeleteConfirm(true)}
+                className="p-2 rounded-lg text-text-muted hover:text-error hover:bg-error-light transition-colors"
+                title="Aufgabe löschen"
               >
-                {isDeleting ? "..." : "Ja"}
+                <Trash2 className="w-5 h-5" />
               </button>
+            )}
+
+            {/* Close Button */}
+            {onClose && (
               <button
-                onClick={() => setShowDeleteConfirm(false)}
-                className="px-2 py-1 text-label-md text-text-muted hover:text-text-primary"
+                onClick={onClose}
+                className="p-2 rounded-lg text-text-muted hover:text-text-primary hover:bg-divider transition-colors"
+                title="Schließen"
               >
-                Nein
+                <X className="w-5 h-5" />
               </button>
-            </div>
-          ) : (
-            <button
-              onClick={() => setShowDeleteConfirm(true)}
-              className="p-2 rounded-lg text-text-muted hover:text-error hover:bg-error-light transition-colors"
-              title="Aufgabe löschen"
-            >
-              <Trash2 className="w-5 h-5" />
-            </button>
-          )}
+            )}
+          </div>
         </div>
 
         {/* Badges below title */}

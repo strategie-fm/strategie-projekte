@@ -6,6 +6,8 @@ Die Heute-Seite (`src/app/page.tsx`) ist die Hauptansicht der Anwendung. Sie zei
 
 ## Layout
 
+### Mit ausgewählter Aufgabe (Zwei-Spalten-Layout)
+
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │ Header: "Heute" + Datum                                         │
@@ -15,7 +17,7 @@ Die Heute-Seite (`src/app/page.tsx`) ist die Hauptansicht der Anwendung. Sie zei
 │ Linke Spalte (flex-1)           │ Rechte Spalte (max 500px)     │
 │                                 │                               │
 │ ┌─────────────────────────────┐ │ ┌───────────────────────────┐ │
-│ │ Überfällig (rot)            │ │ │ TaskDetailView            │ │
+│ │ Überfällig (rot)            │ │ │ TaskDetailView      [X]   │ │
 │ │ - Task Cards                │ │ │                           │ │
 │ └─────────────────────────────┘ │ │ - Titel (editierbar)      │ │
 │                                 │ │ - Projekt/Wiederkehrend   │ │
@@ -35,10 +37,36 @@ Die Heute-Seite (`src/app/page.tsx`) ist die Hauptansicht der Anwendung. Sie zei
 └─────────────────────────────────┴───────────────────────────────┘
 ```
 
+### Ohne ausgewählte Aufgabe (Ein-Spalten-Layout)
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│ Header: "Heute" + Datum                                         │
+├─────────────────────────────────────────────────────────────────┤
+│ FilterBar: Priorität | Status | Zugewiesen | Labels | Erledigt  │
+├─────────────────────────────────────────────────────────────────┤
+│ Volle Breite (flex-1)                                           │
+│                                                                 │
+│ ┌─────────────────────────────────────────────────────────────┐ │
+│ │ Überfällig (rot)                                            │ │
+│ │ - Task Cards                                                │ │
+│ └─────────────────────────────────────────────────────────────┘ │
+│                                                                 │
+│ ┌─────────────────────────────────────────────────────────────┐ │
+│ │ Heute                                                       │ │
+│ │ - Task Cards                                                │ │
+│ └─────────────────────────────────────────────────────────────┘ │
+│                                                                 │
+│ ┌─────────────────────────────────────────────────────────────┐ │
+│ │ QuickAddTask                                                │ │
+│ └─────────────────────────────────────────────────────────────┘ │
+└─────────────────────────────────────────────────────────────────┘
+```
+
 ## Responsive Verhalten
 
 - **Linke Spalte**: `flex-1` - nimmt den verfügbaren Platz
-- **Rechte Spalte**:
+- **Rechte Spalte** (nur wenn Aufgabe ausgewählt):
   - Bevorzugte Breite: `500px`
   - Minimale Breite: `320px`
   - Kann schrumpfen (`shrink`) bei kleineren Bildschirmen
@@ -68,7 +96,7 @@ Zeigt Aufgaben als sortierbare Liste mit Drag-and-Drop-Unterstützung (via dnd-k
 - `tasks`: Array der Aufgaben
 - `onTasksReorder`: Callback bei Neuordnung
 - `onTaskUpdate`: Callback bei Aktualisierung
-- `onTaskClick`: Callback bei Klick (öffnet Detail-Ansicht)
+- `onTaskClick`: Callback bei Klick (öffnet/schließt Detail-Ansicht)
 - `onTaskDelete`: Callback bei Löschen
 - `hideDragHandle`: Versteckt den Drag-Handle
 - `selectedTaskId`: ID der ausgewählten Aufgabe
@@ -101,8 +129,21 @@ Einzelne Aufgaben-Karte mit:
 - Border-Radius: `rounded-lg`
 - Schriftgröße: 12px (`text-label-md`)
 
+**Auswahl-Verhalten:**
+- Klick auf Aufgabe öffnet TaskDetailView
+- Erneuter Klick auf dieselbe Aufgabe schließt TaskDetailView (Toggle)
+
 ### 5. TaskDetailView
-Detailansicht der ausgewählten Aufgabe.
+Detailansicht der ausgewählten Aufgabe. Wird nur angezeigt, wenn eine Aufgabe ausgewählt ist.
+
+**Header:**
+- Titel (editierbar, 22px)
+- Löschen-Button (Papierkorb-Icon)
+- Schließen-Button (X-Icon) - schließt die Detailansicht
+
+**Badges unter Titel:**
+- Projekt (mit Farbpunkt)
+- Wiederkehrend-Badge (falls aktiv)
 
 **Tab-Navigation:**
 - Aufgabe (Formulare)
@@ -116,8 +157,80 @@ Detailansicht der ausgewählten Aufgabe.
 4. Labels
 5. Beschreibung (auto-resize)
 
+**Props:**
+- `task`: Die ausgewählte Aufgabe
+- `onUpdate`: Callback bei Änderungen
+- `onDelete`: Callback beim Löschen
+- `onClose`: Callback zum Schließen der Ansicht
+
 ### 6. QuickAddTask
-Schnelleingabe für neue Aufgaben am Ende der Liste.
+Erweiterte Schnelleingabe für neue Aufgaben.
+
+**Geschlossener Zustand:**
+- Button "Aufgabe hinzufügen" mit Plus-Icon
+
+**Geöffneter Zustand (Formular):**
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│ Aufgabenname...                                             │
+├─────────────────────────────────────────────────────────────┤
+│ ┌─────────────────────┐  ┌─────────────────────┐            │
+│ │ Datum               │  │ Projekt             │            │
+│ │ [Kalender-Input]    │  │ [Dropdown]          │            │
+│ └─────────────────────┘  └─────────────────────┘            │
+│ ┌─────────────────────┐  ┌─────────────────────┐            │
+│ │ Status              │  │ Priorität           │            │
+│ │ [Offen|In Arbeit]   │  │ [P1|P2|P3|P4]       │            │
+│ └─────────────────────┘  └─────────────────────┘            │
+├─────────────────────────────────────────────────────────────┤
+│ [Abbrechen]                              [Erstellen]        │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**Felder:**
+- Titel (Pflichtfeld)
+- Datum (Default: heute)
+- Projekt (Dropdown mit allen Projekten, Default: Inbox)
+- Status (Offen oder In Arbeit)
+- Priorität (P1-P4, Default: P4)
+
+**Verwendete UI-Komponenten:**
+- `Input` (ghost-Variante für Titel)
+- `FormField` / `FormRow` für Layout
+- `PrioritySelector` - zentrale Prioritäts-Auswahl
+- `StatusSelector` - zentrale Status-Auswahl
+
+**Verhalten nach Erstellen:**
+1. Aufgabe wird in der Datenbank gespeichert
+2. Formular wird geschlossen
+3. Aufgabenliste wird aktualisiert
+4. **Erstellte Aufgabe wird automatisch in TaskDetailView geöffnet**
+5. Erweiterte Felder (Wiederholung, Zuweisungen, Labels) können dort bearbeitet werden
+
+**Vorteil:** Auch Aufgaben mit Zukunfts-Datum werden sofort in der TaskDetailView angezeigt.
+
+## Interaktionen
+
+### Aufgabe auswählen
+- **Klick auf Task-Karte** → Öffnet TaskDetailView
+- Task-Karte wird visuell hervorgehoben (linker Akzent, Hintergrund)
+
+### Aufgabe abwählen (zwei Wege)
+1. **X-Button** in TaskDetailView → Schließt die Ansicht
+2. **Erneuter Klick** auf dieselbe Task-Karte → Toggle-Verhalten
+
+### Aufgabe erstellen
+1. Klick auf "Aufgabe hinzufügen"
+2. Felder ausfüllen
+3. "Erstellen" klicken
+4. Aufgabe erscheint automatisch in TaskDetailView zur weiteren Bearbeitung
+
+### Aufgabe erledigen
+- Klick auf Checkbox → Status wechselt zu "done"
+- Aufgabe verschwindet aus Überfällig/Heute
+- Aufgabe erscheint in "Erledigt" (wenn sichtbar)
+- Bei wiederkehrenden Aufgaben: Neue Instanz wird erstellt
 
 ## State Management
 
@@ -144,6 +257,17 @@ const [profiles, setProfiles] = useState<Profile[]>([]);
 const [taskAssigneeMap, setTaskAssigneeMap] = useState<Record<string, string[]>>({});
 ```
 
+## Handler-Funktionen
+
+| Handler | Beschreibung |
+|---------|--------------|
+| `handleTaskUpdate` | Aktualisiert eine Aufgabe in den Listen und in selectedTask |
+| `handleTaskDelete` | Entfernt Aufgabe aus allen Listen, setzt selectedTask auf null |
+| `handleTaskCreated` | Lädt Listen neu, öffnet erstellte Aufgabe in TaskDetailView |
+| `handleTaskClick` | Toggle: Wählt Aufgabe aus oder hebt Auswahl auf |
+| `handleCloseDetail` | Setzt selectedTask auf null |
+| `handleResetFilters` | Setzt alle Filter zurück |
+
 ## Event-System
 
 Die Seite reagiert auf folgende Custom Events:
@@ -169,6 +293,10 @@ Die Seite reagiert auf folgende Custom Events:
 5. Filter werden angewendet (filterTasks)
    ↓
 6. UI wird gerendert
+   ↓
+7. Bei Klick auf Aufgabe: TaskDetailView wird eingeblendet
+   ↓
+8. Bei Erstellen: Neue Aufgabe wird automatisch ausgewählt
 ```
 
 ## Styling
@@ -176,7 +304,8 @@ Die Seite reagiert auf folgende Custom Events:
 ### Typografie
 | Element | Klasse | Größe |
 |---------|--------|-------|
-| Aufgabentitel | `text-h4 font-medium` | 16px |
+| Aufgabentitel (Liste) | `text-h4 font-medium` | 16px |
+| Aufgabentitel (Detail) | `font-semibold` | 22px |
 | Metadaten | `text-label-md` | 12px |
 | Badges | `text-label-md` | 12px |
 | Beschreibungsvorschau | `text-caption` | 12px |
@@ -196,6 +325,12 @@ Die Seite reagiert auf folgende Custom Events:
 - Ausgewählt: `bg-primary-bg/50 border-l-[3px] border-l-primary`
 - Überfällig: `border-l-[3px] border-l-error`
 
+### TaskDetailView
+- Hintergrund: `bg-surface`
+- Border: `border border-border rounded-xl`
+- Header-Border: `border-b border-border`
+- Tab aktiv: `border-primary text-primary`
+
 ## Abhängigkeiten
 
 ### Interne Komponenten
@@ -207,6 +342,15 @@ Die Seite reagiert auf folgende Custom Events:
 - `FilterBar` / `FilterChips` / `ToggleSwitch` - Filter-UI
 - `SectionHeader` / `EmptyState` - UI-Elemente
 
+### Zentrale UI-Komponenten (wiederverwendet)
+- `Input` - Texteingabe
+- `FormField` / `FormRow` - Formularlayout
+- `PrioritySelector` - Prioritätsauswahl (P1-P4)
+- `StatusSelector` - Statusauswahl (Offen/In Arbeit/Erledigt)
+- `AssigneeSelector` - Personenzuweisung
+- `LabelSelector` - Label-Auswahl
+- `RecurrenceSelector` - Wiederholungs-Einstellungen
+
 ### Externe Bibliotheken
 - `@dnd-kit/core` / `@dnd-kit/sortable` - Drag-and-Drop
 - `lucide-react` - Icons
@@ -216,6 +360,7 @@ Die Seite reagiert auf folgende Custom Events:
 - `getLabels()` - Alle Labels laden
 - `getProfiles()` - Alle Benutzerprofile laden
 - `getTaskAssignees(taskId)` - Zuweisungen einer Aufgabe
+- `createTask()` - Neue Aufgabe erstellen
 
 ## Dateien
 
@@ -242,7 +387,11 @@ src/
 │   │   ├── FilterChips.tsx         # Filter-Chips
 │   │   ├── ToggleSwitch.tsx        # Toggle für Erledigte
 │   │   ├── SectionHeader.tsx       # Sektions-Überschrift
-│   │   └── EmptyState.tsx          # Leerer Zustand
+│   │   ├── EmptyState.tsx          # Leerer Zustand
+│   │   ├── Input.tsx               # Texteingabe
+│   │   ├── FormField.tsx           # Formular-Feld
+│   │   ├── PrioritySelector.tsx    # Prioritäts-Auswahl
+│   │   └── StatusSelector.tsx      # Status-Auswahl
 │   └── filters/
 │       └── TaskFilters.tsx         # Filter-Logik
 └── lib/

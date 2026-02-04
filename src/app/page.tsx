@@ -192,8 +192,24 @@ export default function Home() {
     setSelectedTask(null);
   };
 
-  const handleTaskCreated = () => {
-    loadTasks();
+  const handleTaskCreated = (task: TaskWithRelations) => {
+    // Reload tasks to update the lists
+    loadTasks(true);
+    // Immediately select the created task to open it in TaskDetailView
+    setSelectedTask(task);
+  };
+
+  const handleTaskClick = (task: TaskWithRelations) => {
+    // Toggle selection: clicking the same task again deselects it
+    if (selectedTask?.id === task.id) {
+      setSelectedTask(null);
+    } else {
+      setSelectedTask(task);
+    }
+  };
+
+  const handleCloseDetail = () => {
+    setSelectedTask(null);
   };
 
   const handleResetFilters = () => {
@@ -320,7 +336,7 @@ export default function Home() {
                     tasks={filteredOverdue}
                     onTasksReorder={setOverdueTasks}
                     onTaskUpdate={handleTaskUpdate}
-                    onTaskClick={setSelectedTask}
+                    onTaskClick={handleTaskClick}
                     onTaskDelete={handleTaskDelete}
                     hideDragHandle
                     selectedTaskId={selectedTask?.id}
@@ -341,7 +357,7 @@ export default function Home() {
                     tasks={filteredToday}
                     onTasksReorder={setTodayTasks}
                     onTaskUpdate={handleTaskUpdate}
-                    onTaskClick={setSelectedTask}
+                    onTaskClick={handleTaskClick}
                     onTaskDelete={handleTaskDelete}
                     hideDragHandle
                     selectedTaskId={selectedTask?.id}
@@ -370,7 +386,7 @@ export default function Home() {
                         key={task.id}
                         task={task}
                         onUpdate={handleTaskUpdate}
-                        onClick={setSelectedTask}
+                        onClick={handleTaskClick}
                         onDelete={handleTaskDelete}
                         hideDragHandle
                         isSelected={selectedTask?.id === task.id}
@@ -386,14 +402,17 @@ export default function Home() {
           )}
         </div>
 
-        {/* Right Column: Task Detail View */}
-        <div className="w-[500px] shrink min-w-[320px] sticky top-6 self-start max-h-[calc(100vh-120px)]">
-          <TaskDetailView
-            task={selectedTask}
-            onUpdate={handleTaskUpdate}
-            onDelete={handleTaskDelete}
-          />
-        </div>
+        {/* Right Column: Task Detail View - only show when task is selected */}
+        {selectedTask && (
+          <div className="w-[500px] shrink min-w-[320px] sticky top-6 self-start max-h-[calc(100vh-120px)]">
+            <TaskDetailView
+              task={selectedTask}
+              onUpdate={handleTaskUpdate}
+              onDelete={handleTaskDelete}
+              onClose={handleCloseDetail}
+            />
+          </div>
+        )}
       </div>
     </AppLayout>
   );

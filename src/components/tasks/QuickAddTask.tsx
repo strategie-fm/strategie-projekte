@@ -1,19 +1,25 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Plus, Calendar, ChevronDown } from "lucide-react";
+import { Plus, ChevronDown, Folder, Calendar, PlayCircle, Flag } from "lucide-react";
 import { createTask, getProjects } from "@/lib/database";
-import type { Task, Project } from "@/types/database";
+import type { Task, Project, TaskWithRelations } from "@/types/database";
+import { PrioritySelector } from "@/components/ui/PrioritySelector";
+import { StatusSelector } from "@/components/ui/StatusSelector";
+import { Input } from "@/components/ui/Input";
+import { FormField, FormRow } from "@/components/ui/FormField";
+import { cn } from "@/lib/utils";
 
 interface QuickAddTaskProps {
   projectId?: string;
-  onTaskCreated?: (task: Task) => void;
+  onTaskCreated?: (task: TaskWithRelations) => void;
 }
 
 export function QuickAddTask({ projectId, onTaskCreated }: QuickAddTaskProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [title, setTitle] = useState("");
   const [priority, setPriority] = useState<Task["priority"]>("p4");
+  const [status, setStatus] = useState<"todo" | "in_progress">("todo");
   const [dueDate, setDueDate] = useState("");
   const [selectedProjectId, setSelectedProjectId] = useState<string | undefined>(projectId);
   const [projects, setProjects] = useState<Project[]>([]);
@@ -21,16 +27,22 @@ export function QuickAddTask({ projectId, onTaskCreated }: QuickAddTaskProps) {
   const [isCreating, setIsCreating] = useState(false);
 
   useEffect(() => {
-    // Load projects for dropdown
     getProjects().then(setProjects);
   }, []);
 
   useEffect(() => {
-    // Update selected project when projectId prop changes
     setSelectedProjectId(projectId);
   }, [projectId]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  // Set default due date to today when opening
+  useEffect(() => {
+    if (isOpen && !dueDate) {
+      const today = new Date().toISOString().split("T")[0];
+      setDueDate(today);
+    }
+  }, [isOpen, dueDate]);
+
+  const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim() || isCreating) return;
 
@@ -38,32 +50,52 @@ export function QuickAddTask({ projectId, onTaskCreated }: QuickAddTaskProps) {
     const task = await createTask({
       title: title.trim(),
       priority,
+      status,
       due_date: dueDate || undefined,
       project_id: selectedProjectId,
     });
 
     if (task) {
+      // Build TaskWithRelations for the callback
+      const taskProject = projects.find(p => p.id === selectedProjectId);
+      const taskWithRelations: TaskWithRelations = {
+        ...task,
+        projects: taskProject ? [taskProject] : [],
+        labels: [],
+      };
+
+      // Reset form
       setTitle("");
       setPriority("p4");
+      setStatus("todo");
       setDueDate("");
       if (!projectId) {
         setSelectedProjectId(undefined);
       }
+      setShowProjectDropdown(false);
       setIsOpen(false);
-      onTaskCreated?.(task);
+
+      // Notify parent - this will open the task in TaskDetailView
+      onTaskCreated?.(taskWithRelations);
     }
     setIsCreating(false);
   };
 
-  const selectedProject = projects.find(p => p.id === selectedProjectId);
-
-  const priorityColors = {
-    p1: "text-error border-error bg-error-light",
-    p2: "text-warning border-warning bg-warning-light",
-    p3: "text-info border-info bg-info-light",
-    p4: "text-text-muted border-border bg-divider",
+  const handleCancel = () => {
+    setTitle("");
+    setPriority("p4");
+    setStatus("todo");
+    setDueDate("");
+    if (!projectId) {
+      setSelectedProjectId(undefined);
+    }
+    setShowProjectDropdown(false);
+    setIsOpen(false);
   };
 
+  const selectedProject = projects.find(p => p.id === selectedProjectId);
+
+  // Closed state: Show button
   if (!isOpen) {
     return (
       <button
@@ -76,129 +108,145 @@ export function QuickAddTask({ projectId, onTaskCreated }: QuickAddTaskProps) {
     );
   }
 
+  // Open state: Show form
   return (
     <form
-      onSubmit={handleSubmit}
+      onSubmit={handleCreate}
       className="bg-surface rounded-xl shadow-md border border-border p-4"
     >
-      <input
+      {/* Title */}
+      <Input
         type="text"
         value={title}
         onChange={(e) => setTitle(e.target.value)}
         placeholder="Aufgabenname..."
-        className="w-full text-sm font-medium text-text-primary placeholder:text-text-muted outline-none mb-3"
+        variant="ghost"
+        className="w-full mb-4 font-medium"
+        style={{ fontSize: "1rem" }}
         autoFocus
       />
 
-      <div className="flex items-center gap-2 mb-4 flex-wrap">
-        {/* Due Date */}
-        <div className="relative">
-          <input
+      {/* Row 1: Datum / Projekt */}
+      <FormRow className="mb-4">
+        <FormField label="Datum" icon={Calendar} className="flex-1">
+          <Input
             type="date"
             value={dueDate}
             onChange={(e) => setDueDate(e.target.value)}
-            className="pl-8 pr-3 py-1.5 text-xs border border-border rounded-lg focus:border-primary outline-none"
+            className="w-full"
           />
-          <Calendar className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 text-text-muted" />
-        </div>
+        </FormField>
 
-        {/* Project Selector */}
         {!projectId && (
-          <div className="relative">
-            <button
-              type="button"
-              onClick={() => setShowProjectDropdown(!showProjectDropdown)}
-              className="flex items-center gap-2 px-3 py-1.5 text-xs border border-border rounded-lg hover:border-primary transition-colors"
-            >
-              {selectedProject ? (
-                <>
-                  <span
-                    className="w-2 h-2 rounded-sm"
-                    style={{ backgroundColor: selectedProject.color }}
-                  />
-                  <span className="max-w-[100px] truncate">{selectedProject.name}</span>
-                </>
-              ) : (
-                <span className="text-text-muted">Projekt wählen</span>
-              )}
-              <ChevronDown className="w-3 h-3 text-text-muted" />
-            </button>
+          <FormField label="Projekt" icon={Folder} className="flex-1">
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setShowProjectDropdown(!showProjectDropdown)}
+                className={cn(
+                  "w-full h-10 flex items-center gap-2 px-3 rounded-lg transition-colors",
+                  selectedProject
+                    ? "bg-primary-surface text-primary"
+                    : "bg-divider text-text-secondary hover:bg-border"
+                )}
+                style={{ fontSize: "0.875rem", lineHeight: 1.5 }}
+              >
+                {selectedProject ? (
+                  <>
+                    <span
+                      className="w-2 h-2 rounded-sm flex-shrink-0"
+                      style={{ backgroundColor: selectedProject.color }}
+                    />
+                    <span className="flex-1 text-left truncate">{selectedProject.name}</span>
+                  </>
+                ) : (
+                  <span className="flex-1 text-left">Inbox</span>
+                )}
+                <ChevronDown className="w-4 h-4 flex-shrink-0" />
+              </button>
 
-            {showProjectDropdown && (
-              <div className="absolute top-full left-0 mt-1 w-48 bg-surface border border-border rounded-lg shadow-lg z-10">
-                <div className="py-1">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSelectedProjectId(undefined);
-                      setShowProjectDropdown(false);
-                    }}
-                    className="w-full px-3 py-2 text-left text-xs hover:bg-primary-bg transition-colors text-text-muted"
-                  >
-                    Kein Projekt (Inbox)
-                  </button>
-                  {projects.map((project) => (
+              {showProjectDropdown && (
+                <>
+                  <div
+                    className="fixed inset-0 z-40"
+                    onClick={() => setShowProjectDropdown(false)}
+                  />
+                  <div className="absolute top-full left-0 mt-1 w-56 bg-surface border border-border rounded-lg shadow-lg z-50 py-1">
                     <button
-                      key={project.id}
                       type="button"
                       onClick={() => {
-                        setSelectedProjectId(project.id);
+                        setSelectedProjectId(undefined);
                         setShowProjectDropdown(false);
                       }}
-                      className="w-full px-3 py-2 text-left text-xs hover:bg-primary-bg transition-colors flex items-center gap-2"
+                      className={cn(
+                        "w-full px-4 py-2 text-left hover:bg-divider transition-colors",
+                        !selectedProjectId ? "bg-primary-surface text-primary" : "text-text-primary"
+                      )}
+                      style={{ fontSize: "0.875rem", lineHeight: 1.5 }}
                     >
-                      <span
-                        className="w-2 h-2 rounded-sm flex-shrink-0"
-                        style={{ backgroundColor: project.color }}
-                      />
-                      <span className="truncate">{project.name}</span>
+                      Inbox (Kein Projekt)
                     </button>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
+                    {projects.map((project) => (
+                      <button
+                        key={project.id}
+                        type="button"
+                        onClick={() => {
+                          setSelectedProjectId(project.id);
+                          setShowProjectDropdown(false);
+                        }}
+                        className={cn(
+                          "w-full px-4 py-2 text-left hover:bg-divider transition-colors flex items-center gap-2",
+                          selectedProjectId === project.id
+                            ? "bg-primary-surface text-primary"
+                            : "text-text-primary"
+                        )}
+                        style={{ fontSize: "0.875rem", lineHeight: 1.5 }}
+                      >
+                        <span
+                          className="w-2 h-2 rounded-sm flex-shrink-0"
+                          style={{ backgroundColor: project.color }}
+                        />
+                        <span className="truncate">{project.name}</span>
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+          </FormField>
         )}
+      </FormRow>
 
-        {/* Priority */}
-        <div className="flex items-center gap-1">
-          {(["p1", "p2", "p3", "p4"] as const).map((p) => (
-            <button
-              key={p}
-              type="button"
-              onClick={() => setPriority(p)}
-              className={`px-2 py-1 text-xs font-medium rounded border transition-colors ${
-                priority === p
-                  ? priorityColors[p]
-                  : "border-transparent text-text-muted hover:bg-divider"
-              }`}
-            >
-              {p.toUpperCase()}
-            </button>
-          ))}
-        </div>
-      </div>
+      {/* Row 2: Status / Priorität */}
+      <FormRow className="mb-4">
+        <FormField label="Status" icon={PlayCircle} className="flex-1">
+          <StatusSelector
+            value={status}
+            onChange={(value) => {
+              if (value !== "done") setStatus(value);
+            }}
+          />
+        </FormField>
+        <FormField label="Priorität" icon={Flag} className="flex-1">
+          <PrioritySelector value={priority} onChange={setPriority} />
+        </FormField>
+      </FormRow>
 
-      <div className="flex items-center justify-between">
+      {/* Actions */}
+      <div className="flex items-center justify-between pt-2 border-t border-border">
         <button
           type="button"
-          onClick={() => {
-            setIsOpen(false);
-            setTitle("");
-            setPriority("p4");
-            setDueDate("");
-            setShowProjectDropdown(false);
-          }}
-          className="px-3 py-1.5 text-sm text-text-muted hover:text-text-primary transition-colors"
+          onClick={handleCancel}
+          className="px-3 py-1.5 text-body-md text-text-muted hover:text-text-primary transition-colors"
         >
           Abbrechen
         </button>
         <button
           type="submit"
           disabled={!title.trim() || isCreating}
-          className="px-4 py-1.5 text-sm font-medium bg-primary text-white rounded-lg hover:bg-primary-variant disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          className="px-4 py-1.5 text-body-md font-medium bg-primary text-white rounded-lg hover:bg-primary-variant disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
         >
-          {isCreating ? "Speichern..." : "Hinzufügen"}
+          {isCreating ? "Erstellen..." : "Erstellen"}
         </button>
       </div>
     </form>
