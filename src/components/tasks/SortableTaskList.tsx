@@ -25,7 +25,11 @@ interface SortableTaskListProps {
   onTasksReorder: (tasks: TaskWithRelations[]) => void;
   onTaskUpdate: (task: TaskWithRelations) => void;
   onTaskClick?: (task: TaskWithRelations) => void;
+  onTaskDelete?: (taskId: string) => void;
   showProject?: boolean;
+  hideDragHandle?: boolean;
+  selectedTaskId?: string | null;
+  isOverdueSection?: boolean;
 }
 
 export function SortableTaskList({
@@ -33,7 +37,11 @@ export function SortableTaskList({
   onTasksReorder,
   onTaskUpdate,
   onTaskClick,
+  onTaskDelete,
   showProject = true,
+  hideDragHandle = false,
+  selectedTaskId = null,
+  isOverdueSection = false,
 }: SortableTaskListProps) {
   const [activeId, setActiveId] = useState<string | null>(null);
 
@@ -65,7 +73,7 @@ export function SortableTaskList({
     onTasksReorder(newTasks);
 
     // Update positions in database
-    const updates = newTasks.map((task, index) => 
+    const updates = newTasks.map((task, index) =>
       updateTask(task.id, { position: index })
     );
     await Promise.all(updates);
@@ -83,14 +91,18 @@ export function SortableTaskList({
       onDragEnd={handleDragEnd}
     >
       <SortableContext items={tasks.map(t => t.id)} strategy={verticalListSortingStrategy}>
-        <div className="bg-surface rounded-xl shadow-sm border border-border">
+        <div className="flex flex-col gap-2">
           {tasks.map((task) => (
             <SortableTaskItem
               key={task.id}
               task={task}
               onUpdate={onTaskUpdate}
               onClick={onTaskClick}
+              onDelete={onTaskDelete}
               showProject={showProject}
+              hideDragHandle={hideDragHandle}
+              isSelected={selectedTaskId === task.id}
+              isOverdue={isOverdueSection}
               isDragging={activeId === task.id}
             />
           ))}

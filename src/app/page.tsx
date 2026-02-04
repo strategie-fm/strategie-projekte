@@ -7,7 +7,6 @@ import { SortableTaskList } from "@/components/tasks/SortableTaskList";
 import { SortableTaskItem } from "@/components/tasks/SortableTaskItem";
 import { QuickAddTask } from "@/components/tasks/QuickAddTask";
 import { TaskDetailView } from "@/components/tasks/TaskDetailView";
-import { Card } from "@/components/ui/Card";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { FilterBar } from "@/components/ui/FilterBar";
@@ -322,6 +321,10 @@ export default function Home() {
                     onTasksReorder={setOverdueTasks}
                     onTaskUpdate={handleTaskUpdate}
                     onTaskClick={setSelectedTask}
+                    onTaskDelete={handleTaskDelete}
+                    hideDragHandle
+                    selectedTaskId={selectedTask?.id}
+                    isOverdueSection
                   />
                 </section>
               )}
@@ -339,6 +342,9 @@ export default function Home() {
                     onTasksReorder={setTodayTasks}
                     onTaskUpdate={handleTaskUpdate}
                     onTaskClick={setSelectedTask}
+                    onTaskDelete={handleTaskDelete}
+                    hideDragHandle
+                    selectedTaskId={selectedTask?.id}
                   />
                 ) : (
                   <EmptyState
@@ -358,16 +364,19 @@ export default function Home() {
                     icon={Check}
                     variant="muted"
                   />
-                  <Card variant="muted">
+                  <div className="flex flex-col gap-2">
                     {filteredCompleted.map((task) => (
                       <SortableTaskItem
                         key={task.id}
                         task={task}
                         onUpdate={handleTaskUpdate}
                         onClick={setSelectedTask}
+                        onDelete={handleTaskDelete}
+                        hideDragHandle
+                        isSelected={selectedTask?.id === task.id}
                       />
                     ))}
-                  </Card>
+                  </div>
                 </section>
               )}
 
@@ -378,7 +387,7 @@ export default function Home() {
         </div>
 
         {/* Right Column: Task Detail View */}
-        <div className="w-[600px] shrink-0 sticky top-6 self-start max-h-[calc(100vh-120px)]">
+        <div className="w-[500px] shrink min-w-[320px] sticky top-6 self-start max-h-[calc(100vh-120px)]">
           <TaskDetailView
             task={selectedTask}
             onUpdate={handleTaskUpdate}
