@@ -119,8 +119,12 @@ export function SortableTaskItem({
     setIsDeleting(true);
     const success = await deleteTask(task.id);
 
-    if (success && onDelete) {
-      onDelete(task.id);
+    if (success) {
+      // Notify sidebar and other components about the deletion
+      window.dispatchEvent(new Event("taskUpdated"));
+      if (onDelete) {
+        onDelete(task.id);
+      }
     }
     setIsDeleting(false);
     setShowDeleteConfirm(false);
