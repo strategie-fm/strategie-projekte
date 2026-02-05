@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { GripVertical, RotateCcw, ListTodo, Trash2 } from "lucide-react";
-import { updateTask, getTaskAssignees, completeRecurringTask } from "@/lib/database";
+import { updateTask, deleteTask, getTaskAssignees, completeRecurringTask } from "@/lib/database";
 import type { TaskWithRelations, TaskAssignee } from "@/types/database";
 import { cn } from "@/lib/utils";
 
@@ -104,11 +104,31 @@ export function SortableTaskItem({
     }
   };
 
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+
   const handleDeleteClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (onDelete) {
+    setShowDeleteConfirm(true);
+  };
+
+  const handleConfirmDelete = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (isDeleting) return;
+
+    setIsDeleting(true);
+    const success = await deleteTask(task.id);
+
+    if (success && onDelete) {
       onDelete(task.id);
     }
+    setIsDeleting(false);
+    setShowDeleteConfirm(false);
+  };
+
+  const handleCancelDelete = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setShowDeleteConfirm(false);
   };
 
   const priorityBadgeColors = {
@@ -330,15 +350,35 @@ export function SortableTaskItem({
           {/* Spacer für rechtsbündiges Löschen-Icon */}
           <div className="flex-1" />
 
-          {/* Delete Button - rechtsbündig */}
+          {/* Delete Button / Confirm - rechtsbündig */}
           {onDelete && (
-            <button
-              onClick={handleDeleteClick}
-              className="p-1 rounded-lg text-text-muted hover:text-error hover:bg-error-light transition-colors opacity-0 group-hover:opacity-100"
-              title="Löschen"
-            >
-              <Trash2 className="w-3.5 h-3.5" />
-            </button>
+            showDeleteConfirm ? (
+              <div className="flex items-center gap-1">
+                <span className="text-label-md text-text-muted mr-1">Löschen?</span>
+                <button
+                  onClick={handleConfirmDelete}
+                  disabled={isDeleting}
+                  className="px-2 py-0.5 rounded text-label-md bg-error text-white hover:bg-error/90 transition-colors disabled:opacity-50"
+                >
+                  {isDeleting ? "..." : "Ja"}
+                </button>
+                <button
+                  onClick={handleCancelDelete}
+                  disabled={isDeleting}
+                  className="px-2 py-0.5 rounded text-label-md bg-divider text-text-secondary hover:bg-border transition-colors disabled:opacity-50"
+                >
+                  Nein
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={handleDeleteClick}
+                className="p-1 rounded-lg text-text-muted hover:text-error hover:bg-error-light transition-colors opacity-0 group-hover:opacity-100"
+                title="Löschen"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+              </button>
+            )
           )}
         </div>
       </div>
