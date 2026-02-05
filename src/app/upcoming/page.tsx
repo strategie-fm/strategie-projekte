@@ -454,12 +454,12 @@ export default function UpcomingPage() {
 
             return (
               <section key={projectId} className="mb-6">
-                <div className="flex items-center gap-2 mb-3">
-                  <span
-                    className="w-3 h-3 rounded-sm"
-                    style={{ backgroundColor: project.color }}
-                  />
-                  <h2 className="text-label-lg text-text-secondary">
+                <div className="flex items-center justify-between mb-3">
+                  <h2 className="text-label-lg text-text-secondary flex items-center gap-2">
+                    <span
+                      className="w-2 h-2 rounded-sm"
+                      style={{ backgroundColor: project.color }}
+                    />
                     {project.name} ({projectTasks.length})
                   </h2>
                 </div>
