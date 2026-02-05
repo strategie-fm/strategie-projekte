@@ -22,7 +22,11 @@ export function ProjectSelector({ taskId, currentProject, onChange }: ProjectSel
     const loadProjects = async () => {
       setLoading(true);
       const data = await getProjects();
-      setProjects(data);
+      // Sort alphabetically by name
+      const sorted = [...data].sort((a, b) =>
+        a.name.localeCompare(b.name, "de")
+      );
+      setProjects(sorted);
       setLoading(false);
     };
     loadProjects();

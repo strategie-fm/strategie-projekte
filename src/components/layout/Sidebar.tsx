@@ -288,7 +288,7 @@ export function Sidebar() {
 
             {projectsExpanded && (
               <ul className="mt-1 space-y-1">
-                {projects.map((project) => {
+                {[...projects].sort((a, b) => a.name.localeCompare(b.name, "de")).map((project) => {
                   const isActive = pathname === `/projects/${project.id}`;
                   const progress = projectProgress[project.id];
                   const percentage = progress && progress.total > 0
