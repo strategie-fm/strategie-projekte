@@ -9,7 +9,8 @@ import { LabelSelector } from "./LabelSelector";
 import { CommentList } from "./CommentList";
 import { RecurrenceSelector } from "./RecurrenceSelector";
 import { AssigneeSelector } from "./AssigneeSelector";
-import type { TaskWithRelations } from "@/types/database";
+import { ProjectSelector } from "./ProjectSelector";
+import type { TaskWithRelations, Project } from "@/types/database";
 import { FormField, FormRow } from "@/components/ui/FormField";
 import { Input } from "@/components/ui/Input";
 import { TextArea } from "@/components/ui/TextArea";
@@ -186,6 +187,15 @@ export function TaskDetailView({
     }
   };
 
+  const handleProjectChange = (project: Project | null) => {
+    if (task) {
+      onUpdate({
+        ...task,
+        projects: project ? [project] : [],
+      });
+    }
+  };
+
   if (!task) {
     return (
       <div className="flex items-center justify-center h-full bg-surface rounded-xl border border-border text-text-muted">
@@ -324,6 +334,13 @@ export function TaskDetailView({
         {/* Aufgabe Tab */}
         {activeTab === "task" && (
           <div className="p-6 space-y-6">
+            {/* Row 0: Aufgabenliste */}
+            <ProjectSelector
+              taskId={task.id}
+              currentProject={currentProject || null}
+              onChange={handleProjectChange}
+            />
+
             {/* Row 1: Datum / Wiederholung */}
             <FormRow>
               <FormField label="Datum" icon={Calendar} className="flex-1">

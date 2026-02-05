@@ -396,6 +396,36 @@ export async function deleteTask(id: string): Promise<boolean> {
   return true;
 }
 
+export async function updateTaskProject(taskId: string, projectId: string | null): Promise<boolean> {
+  // Remove existing project links
+  const { error: deleteError } = await supabase
+    .from("task_projects")
+    .delete()
+    .eq("task_id", taskId);
+
+  if (deleteError) {
+    console.error("Error removing task project link:", deleteError);
+    return false;
+  }
+
+  // Add new project link if projectId is provided
+  if (projectId) {
+    const { error: insertError } = await supabase
+      .from("task_projects")
+      .insert({
+        task_id: taskId,
+        project_id: projectId,
+      });
+
+    if (insertError) {
+      console.error("Error linking task to project:", insertError);
+      return false;
+    }
+  }
+
+  return true;
+}
+
 export async function searchTasks(query: string): Promise<TaskWithRelations[]> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user || !query.trim()) return [];
