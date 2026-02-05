@@ -187,27 +187,32 @@ export async function getTasks(options?: { excludeCompleted?: boolean }): Promis
   }
 
   const taskIds = tasks.map(t => t.id);
-  
-  // Load project links
-  const { data: taskProjects } = await supabase
-    .from("task_projects")
-    .select("task_id, project_id, projects(*)")
-    .in("task_id", taskIds);
 
-  // Load subtask counts
-  const subtaskCounts = await getSubtaskCount(taskIds);
-
-  // Load labels for all tasks
-  const { data: taskLabels } = await supabase
-    .from("task_labels")
-    .select("task_id, label_id, labels(*)")
-    .in("task_id", taskIds);
-
-  // Load assignees for all tasks
-  const { data: taskAssignees } = await supabase
-    .from("task_assignees")
-    .select("task_id, user_id, profile:profiles!task_assignees_user_id_fkey(*)")
-    .in("task_id", taskIds);
+  // Load all relations in parallel for better performance
+  const [
+    { data: taskProjects },
+    subtaskCounts,
+    { data: taskLabels },
+    { data: taskAssignees },
+  ] = await Promise.all([
+    // Load project links
+    supabase
+      .from("task_projects")
+      .select("task_id, project_id, projects(*)")
+      .in("task_id", taskIds),
+    // Load subtask counts
+    getSubtaskCount(taskIds),
+    // Load labels for all tasks
+    supabase
+      .from("task_labels")
+      .select("task_id, label_id, labels(*)")
+      .in("task_id", taskIds),
+    // Load assignees for all tasks
+    supabase
+      .from("task_assignees")
+      .select("task_id, user_id, profile:profiles!task_assignees_user_id_fkey(*)")
+      .in("task_id", taskIds),
+  ]);
 
   return tasks.map((task) => {
     const projectLinks = taskProjects?.filter(tp => tp.task_id === task.id) || [];
@@ -291,23 +296,28 @@ export async function getCompletedTasks(options?: {
     if (taskIds.length === 0) return [];
   }
 
-  // Load project links
-  const { data: taskProjects } = await supabase
-    .from("task_projects")
-    .select("task_id, project_id, projects(*)")
-    .in("task_id", taskIds);
-
-  // Load labels for all tasks
-  const { data: taskLabels } = await supabase
-    .from("task_labels")
-    .select("task_id, label_id, labels(*)")
-    .in("task_id", taskIds);
-
-  // Load assignees for all tasks
-  const { data: taskAssignees } = await supabase
-    .from("task_assignees")
-    .select("task_id, user_id, profile:profiles!task_assignees_user_id_fkey(*)")
-    .in("task_id", taskIds);
+  // Load all relations in parallel for better performance
+  const [
+    { data: taskProjects },
+    { data: taskLabels },
+    { data: taskAssignees },
+  ] = await Promise.all([
+    // Load project links
+    supabase
+      .from("task_projects")
+      .select("task_id, project_id, projects(*)")
+      .in("task_id", taskIds),
+    // Load labels for all tasks
+    supabase
+      .from("task_labels")
+      .select("task_id, label_id, labels(*)")
+      .in("task_id", taskIds),
+    // Load assignees for all tasks
+    supabase
+      .from("task_assignees")
+      .select("task_id, user_id, profile:profiles!task_assignees_user_id_fkey(*)")
+      .in("task_id", taskIds),
+  ]);
 
   const filteredTasks = options?.projectId
     ? tasks.filter(t => taskIds.includes(t.id))
@@ -378,26 +388,31 @@ export async function getTasksByProject(projectId: string): Promise<TaskWithRela
     return [];
   }
 
-  const { data: project } = await supabase
-    .from("projects")
-    .select("*")
-    .eq("id", projectId)
-    .single();
-
-  // Load subtask counts
-  const subtaskCounts = await getSubtaskCount(taskIds);
-
-  // Load labels
-  const { data: taskLabels } = await supabase
-    .from("task_labels")
-    .select("task_id, label_id, labels(*)")
-    .in("task_id", taskIds);
-
-  // Load assignees
-  const { data: taskAssignees } = await supabase
-    .from("task_assignees")
-    .select("task_id, user_id, profile:profiles!task_assignees_user_id_fkey(*)")
-    .in("task_id", taskIds);
+  // Load all relations in parallel for better performance
+  const [
+    { data: project },
+    subtaskCounts,
+    { data: taskLabels },
+    { data: taskAssignees },
+  ] = await Promise.all([
+    supabase
+      .from("projects")
+      .select("*")
+      .eq("id", projectId)
+      .single(),
+    // Load subtask counts
+    getSubtaskCount(taskIds),
+    // Load labels
+    supabase
+      .from("task_labels")
+      .select("task_id, label_id, labels(*)")
+      .in("task_id", taskIds),
+    // Load assignees
+    supabase
+      .from("task_assignees")
+      .select("task_id, user_id, profile:profiles!task_assignees_user_id_fkey(*)")
+      .in("task_id", taskIds),
+  ]);
 
   return (tasks || []).map((task) => {
     const labelLinks = taskLabels?.filter(tl => tl.task_id === task.id) || [];
@@ -466,20 +481,25 @@ export async function getInboxTasks(): Promise<TaskWithRelations[]> {
 
   const inboxTaskIds = inboxTasks.map(t => t.id);
 
-  // Load subtask counts
-  const subtaskCounts = await getSubtaskCount(inboxTaskIds);
-
-  // Load labels
-  const { data: taskLabels } = await supabase
-    .from("task_labels")
-    .select("task_id, label_id, labels(*)")
-    .in("task_id", inboxTaskIds);
-
-  // Load assignees
-  const { data: taskAssignees } = await supabase
-    .from("task_assignees")
-    .select("task_id, user_id, profile:profiles!task_assignees_user_id_fkey(*)")
-    .in("task_id", inboxTaskIds);
+  // Load all relations in parallel for better performance
+  const [
+    subtaskCounts,
+    { data: taskLabels },
+    { data: taskAssignees },
+  ] = await Promise.all([
+    // Load subtask counts
+    getSubtaskCount(inboxTaskIds),
+    // Load labels
+    supabase
+      .from("task_labels")
+      .select("task_id, label_id, labels(*)")
+      .in("task_id", inboxTaskIds),
+    // Load assignees
+    supabase
+      .from("task_assignees")
+      .select("task_id, user_id, profile:profiles!task_assignees_user_id_fkey(*)")
+      .in("task_id", inboxTaskIds),
+  ]);
 
   return inboxTasks.map((task) => {
     const labelLinks = taskLabels?.filter(tl => tl.task_id === task.id) || [];
