@@ -159,96 +159,53 @@ export async function getArchivedProjects(): Promise<Project[]> {
 // TASKS
 // ============================================
 
+// Helper: Parse view data into TaskWithRelations
+function parseViewTask(viewTask: Record<string, unknown>): TaskWithRelations {
+  const subtaskCountData = viewTask.subtask_count as { total: number; completed: number } | null;
+
+  return {
+    id: viewTask.id as string,
+    title: viewTask.title as string,
+    description: viewTask.description as string | null,
+    status: viewTask.status as Task["status"],
+    priority: viewTask.priority as Task["priority"],
+    due_date: viewTask.due_date as string | null,
+    completed_at: viewTask.completed_at as string | null,
+    position: viewTask.position as number,
+    section_id: viewTask.section_id as string | null,
+    parent_task_id: viewTask.parent_task_id as string | null,
+    created_by: viewTask.created_by as string,
+    created_at: viewTask.created_at as string,
+    updated_at: viewTask.updated_at as string,
+    projects: (viewTask.projects as Project[]) || [],
+    labels: (viewTask.labels as Label[]) || [],
+    assignees: (viewTask.assignees as TaskAssignee[]) || [],
+    subtaskCount: subtaskCountData && subtaskCountData.total > 0 ? subtaskCountData : undefined,
+  };
+}
+
 export async function getTasks(options?: { excludeCompleted?: boolean }): Promise<TaskWithRelations[]> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return [];
 
-  // RLS handles access control - no need to filter by created_by
+  // Use view for single-query loading of all relations
   let query = supabase
-    .from("tasks")
-    .select("*")
-    .is("parent_task_id", null)
-    .neq("status", "archived");
+    .from("tasks_with_relations")
+    .select("*");
 
-  // Optionally exclude completed tasks for faster initial load
+  // Optionally exclude completed tasks
   if (options?.excludeCompleted) {
     query = query.neq("status", "done");
   }
 
-  const { data: tasks, error } = await query.order("position", { ascending: true });
+  const { data, error } = await query.order("position", { ascending: true });
 
   if (error) {
-    console.error("Error fetching tasks:", error);
+    console.error("Error fetching tasks from view:", error);
     return [];
   }
 
-  if (!tasks || tasks.length === 0) {
-    return [];
-  }
-
-  const taskIds = tasks.map(t => t.id);
-
-  // Load all relations in parallel for better performance
-  const [
-    { data: taskProjects },
-    subtaskCounts,
-    { data: taskLabels },
-    { data: taskAssignees },
-  ] = await Promise.all([
-    // Load project links
-    supabase
-      .from("task_projects")
-      .select("task_id, project_id, projects(*)")
-      .in("task_id", taskIds),
-    // Load subtask counts
-    getSubtaskCount(taskIds),
-    // Load labels for all tasks
-    supabase
-      .from("task_labels")
-      .select("task_id, label_id, labels(*)")
-      .in("task_id", taskIds),
-    // Load assignees for all tasks
-    supabase
-      .from("task_assignees")
-      .select("task_id, user_id, profile:profiles!task_assignees_user_id_fkey(*)")
-      .in("task_id", taskIds),
-  ]);
-
-  return tasks.map((task) => {
-    const projectLinks = taskProjects?.filter(tp => tp.task_id === task.id) || [];
-    const projects: Project[] = [];
-
-    projectLinks.forEach(tp => {
-      if (tp.projects && typeof tp.projects === 'object' && !Array.isArray(tp.projects)) {
-        projects.push(tp.projects as unknown as Project);
-      }
-    });
-
-    const labelLinks = taskLabels?.filter(tl => tl.task_id === task.id) || [];
-    const labels: Label[] = [];
-
-    labelLinks.forEach(tl => {
-      if (tl.labels && typeof tl.labels === 'object' && !Array.isArray(tl.labels)) {
-        labels.push(tl.labels as unknown as Label);
-      }
-    });
-
-    // Map assignees
-    const assigneeLinks = taskAssignees?.filter(ta => ta.task_id === task.id) || [];
-    const assignees: TaskAssignee[] = assigneeLinks.map(ta => ({
-      task_id: ta.task_id,
-      user_id: ta.user_id,
-      profile: ta.profile as unknown as Profile,
-    })) as TaskAssignee[];
-
-    return {
-      ...task,
-      projects,
-      assignees,
-      labels,
-      subtaskCount: subtaskCounts[task.id] || undefined,
-    };
-  });
+  return (data || []).map(parseViewTask);
 }
 
 // Lazy loading: Fetch only completed tasks (for "Show completed" toggle)
@@ -259,110 +216,40 @@ export async function getCompletedTasks(options?: {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return [];
 
+  // Use view for single-query loading
   let query = supabase
-    .from("tasks")
+    .from("tasks_with_relations")
     .select("*")
-    .is("parent_task_id", null)
     .eq("status", "done");
 
   if (options?.dueDateLte) {
     query = query.lte("due_date", options.dueDateLte);
   }
 
-  const { data: tasks, error } = await query.order("completed_at", { ascending: false });
+  const { data, error } = await query.order("completed_at", { ascending: false });
 
   if (error) {
-    console.error("Error fetching completed tasks:", error);
+    console.error("Error fetching completed tasks from view:", error);
     return [];
   }
 
-  if (!tasks || tasks.length === 0) {
-    return [];
-  }
+  let tasks = (data || []).map(parseViewTask);
 
-  let taskIds = tasks.map(t => t.id);
-
-  // If projectId is specified, filter tasks by project
+  // Filter by projectId in JavaScript (projects is already loaded as JSON array)
   if (options?.projectId) {
-    const { data: taskProjectLinks } = await supabase
-      .from("task_projects")
-      .select("task_id")
-      .eq("project_id", options.projectId)
-      .in("task_id", taskIds);
-
-    const projectTaskIds = new Set(taskProjectLinks?.map(tp => tp.task_id) || []);
-    taskIds = taskIds.filter(id => projectTaskIds.has(id));
-
-    if (taskIds.length === 0) return [];
+    tasks = tasks.filter(task =>
+      (task.projects || []).some(p => p.id === options.projectId)
+    );
   }
 
-  // Load all relations in parallel for better performance
-  const [
-    { data: taskProjects },
-    { data: taskLabels },
-    { data: taskAssignees },
-  ] = await Promise.all([
-    // Load project links
-    supabase
-      .from("task_projects")
-      .select("task_id, project_id, projects(*)")
-      .in("task_id", taskIds),
-    // Load labels for all tasks
-    supabase
-      .from("task_labels")
-      .select("task_id, label_id, labels(*)")
-      .in("task_id", taskIds),
-    // Load assignees for all tasks
-    supabase
-      .from("task_assignees")
-      .select("task_id, user_id, profile:profiles!task_assignees_user_id_fkey(*)")
-      .in("task_id", taskIds),
-  ]);
-
-  const filteredTasks = options?.projectId
-    ? tasks.filter(t => taskIds.includes(t.id))
-    : tasks;
-
-  return filteredTasks.map((task) => {
-    const projectLinks = taskProjects?.filter(tp => tp.task_id === task.id) || [];
-    const projects: Project[] = [];
-
-    projectLinks.forEach(tp => {
-      if (tp.projects && typeof tp.projects === 'object' && !Array.isArray(tp.projects)) {
-        projects.push(tp.projects as unknown as Project);
-      }
-    });
-
-    const labelLinks = taskLabels?.filter(tl => tl.task_id === task.id) || [];
-    const labels: Label[] = [];
-
-    labelLinks.forEach(tl => {
-      if (tl.labels && typeof tl.labels === 'object' && !Array.isArray(tl.labels)) {
-        labels.push(tl.labels as unknown as Label);
-      }
-    });
-
-    const assigneeLinks = taskAssignees?.filter(ta => ta.task_id === task.id) || [];
-    const assignees: TaskAssignee[] = assigneeLinks.map(ta => ({
-      task_id: ta.task_id,
-      user_id: ta.user_id,
-      profile: ta.profile as unknown as Profile,
-    })) as TaskAssignee[];
-
-    return {
-      ...task,
-      projects,
-      assignees,
-      labels,
-    };
-  });
+  return tasks;
 }
 
 export async function getTasksByProject(projectId: string): Promise<TaskWithRelations[]> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return [];
 
-  // RLS handles access control
+  // Get task IDs for this project first (needed for filtering view)
   const { data: taskProjectLinks, error: linkError } = await supabase
     .from("task_projects")
     .select("task_id")
@@ -374,159 +261,42 @@ export async function getTasksByProject(projectId: string): Promise<TaskWithRela
 
   const taskIds = taskProjectLinks.map(tp => tp.task_id);
 
-  // RLS handles access control - no need to filter by created_by
-  const { data: tasks, error } = await supabase
-    .from("tasks")
+  // Use view for single-query loading, filtered by task IDs
+  const { data, error } = await supabase
+    .from("tasks_with_relations")
     .select("*")
     .in("id", taskIds)
-    .is("parent_task_id", null)
-    .neq("status", "archived")
+    .neq("status", "done")
     .order("position", { ascending: true });
 
   if (error) {
-    console.error("Error fetching tasks:", error);
+    console.error("Error fetching tasks from view:", error);
     return [];
   }
 
-  // Load all relations in parallel for better performance
-  const [
-    { data: project },
-    subtaskCounts,
-    { data: taskLabels },
-    { data: taskAssignees },
-  ] = await Promise.all([
-    supabase
-      .from("projects")
-      .select("*")
-      .eq("id", projectId)
-      .single(),
-    // Load subtask counts
-    getSubtaskCount(taskIds),
-    // Load labels
-    supabase
-      .from("task_labels")
-      .select("task_id, label_id, labels(*)")
-      .in("task_id", taskIds),
-    // Load assignees
-    supabase
-      .from("task_assignees")
-      .select("task_id, user_id, profile:profiles!task_assignees_user_id_fkey(*)")
-      .in("task_id", taskIds),
-  ]);
-
-  return (tasks || []).map((task) => {
-    const labelLinks = taskLabels?.filter(tl => tl.task_id === task.id) || [];
-    const labels: Label[] = [];
-
-    labelLinks.forEach(tl => {
-      if (tl.labels && typeof tl.labels === 'object' && !Array.isArray(tl.labels)) {
-        labels.push(tl.labels as unknown as Label);
-      }
-    });
-
-    // Map assignees
-    const assigneeLinks = taskAssignees?.filter(ta => ta.task_id === task.id) || [];
-    const assignees: TaskAssignee[] = assigneeLinks.map(ta => ({
-      task_id: ta.task_id,
-      user_id: ta.user_id,
-      profile: ta.profile as unknown as Profile,
-    })) as TaskAssignee[];
-
-    return {
-      ...task,
-      projects: project ? [project] : [],
-      assignees,
-      labels,
-      subtaskCount: subtaskCounts[task.id] || undefined,
-      section_id: task.section_id,
-    };
-  });
+  return (data || []).map(parseViewTask);
 }
 
 export async function getInboxTasks(): Promise<TaskWithRelations[]> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return [];
 
-  // Inbox shows only user's own tasks without project assignment
-  const { data: tasks, error } = await supabase
-    .from("tasks")
+  // Use view and filter for tasks without projects (inbox)
+  const { data, error } = await supabase
+    .from("tasks_with_relations")
     .select("*")
     .eq("created_by", user.id)
-    .is("parent_task_id", null)
-    .neq("status", "archived")
     .order("created_at", { ascending: false });
 
   if (error) {
-    console.error("Error fetching tasks:", error);
+    console.error("Error fetching inbox tasks from view:", error);
     return [];
   }
 
-  if (!tasks || tasks.length === 0) {
-    return [];
-  }
-
-  const taskIds = tasks.map(t => t.id);
-  
-  const { data: taskProjects } = await supabase
-    .from("task_projects")
-    .select("task_id")
-    .in("task_id", taskIds);
-
-  const tasksWithProjects = new Set(taskProjects?.map(tp => tp.task_id) || []);
-  const inboxTasks = tasks.filter(task => !tasksWithProjects.has(task.id));
-
-  if (inboxTasks.length === 0) {
-    return [];
-  }
-
-  const inboxTaskIds = inboxTasks.map(t => t.id);
-
-  // Load all relations in parallel for better performance
-  const [
-    subtaskCounts,
-    { data: taskLabels },
-    { data: taskAssignees },
-  ] = await Promise.all([
-    // Load subtask counts
-    getSubtaskCount(inboxTaskIds),
-    // Load labels
-    supabase
-      .from("task_labels")
-      .select("task_id, label_id, labels(*)")
-      .in("task_id", inboxTaskIds),
-    // Load assignees
-    supabase
-      .from("task_assignees")
-      .select("task_id, user_id, profile:profiles!task_assignees_user_id_fkey(*)")
-      .in("task_id", inboxTaskIds),
-  ]);
-
-  return inboxTasks.map((task) => {
-    const labelLinks = taskLabels?.filter(tl => tl.task_id === task.id) || [];
-    const labels: Label[] = [];
-
-    labelLinks.forEach(tl => {
-      if (tl.labels && typeof tl.labels === 'object' && !Array.isArray(tl.labels)) {
-        labels.push(tl.labels as unknown as Label);
-      }
-    });
-
-    // Map assignees
-    const assigneeLinks = taskAssignees?.filter(ta => ta.task_id === task.id) || [];
-    const assignees: TaskAssignee[] = assigneeLinks.map(ta => ({
-      task_id: ta.task_id,
-      user_id: ta.user_id,
-      profile: ta.profile as unknown as Profile,
-    })) as TaskAssignee[];
-
-    return {
-      ...task,
-      projects: [],
-      assignees,
-      labels,
-      subtaskCount: subtaskCounts[task.id] || undefined,
-    };
-  });
+  // Filter for tasks without projects (inbox tasks)
+  return (data || [])
+    .map(parseViewTask)
+    .filter(task => (task.projects || []).length === 0);
 }
 
 export async function createTask(task: {
