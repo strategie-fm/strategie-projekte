@@ -289,21 +289,35 @@ Pro Team-Mitglied:
 
 ## Keyboard Shortcuts
 
-### Navigation
+### Schnellnavigation (Ziffern)
 
 | Taste | Aktion |
 |-------|--------|
-| `D` | Dashboard öffnen |
-| `H` | Heute/Startseite öffnen |
-| `I` | Inbox öffnen |
-| `U` | Anstehend öffnen |
-| `S` | Suche öffnen |
+| `1` | Dashboard öffnen |
+| `2` | Heute/Startseite öffnen |
+| `3` | Meine Aufgaben öffnen |
+| `4` | Anstehend öffnen |
+| `5` | Eingang öffnen |
+| `6` | Suche öffnen |
+
+### Navigation (g + Taste)
+
+| Tasten | Aktion |
+|--------|--------|
+| `g d` | Dashboard öffnen |
+| `g h` | Heute/Startseite öffnen |
+| `g t` | Heute/Startseite öffnen (alias) |
+| `g m` | Meine Aufgaben öffnen |
+| `g u` | Anstehend öffnen |
+| `g i` | Eingang öffnen |
+| `g s` | Suche öffnen |
 
 ### Aktionen
 
 | Taste | Aktion |
 |-------|--------|
 | `N` | Neue Aufgabe erstellen (Quick-Add) |
+| `/` | Zur Suche navigieren |
 | `?` | Shortcuts-Hilfe anzeigen |
 | `Escape` | Modal/Panel schließen |
 

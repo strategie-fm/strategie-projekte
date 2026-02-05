@@ -31,10 +31,10 @@ const DEFAULT_WIDTH = 256;
 
 const navItems = [
   { href: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
-  { href: "/inbox", icon: Inbox, label: "Eingang" },
   { href: "/", icon: Home, label: "Heute" },
   { href: "/my-tasks", icon: User, label: "Meine Aufgaben" },
   { href: "/upcoming", icon: CalendarDays, label: "Anstehend" },
+  { href: "/inbox", icon: Inbox, label: "Eingang" },
   { href: "/search", icon: Search, label: "Suche" },
   { href: "/teams", icon: Users, label: "Teams" },
 ];

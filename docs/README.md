@@ -137,12 +137,20 @@ strategie-projekte/
 
 | Taste | Aktion |
 |-------|--------|
+| `1` | Zum Dashboard |
+| `2` | Zur Startseite (Heute) |
+| `3` | Zu Meine Aufgaben |
+| `4` | Zu Anstehend |
+| `5` | Zum Eingang |
+| `6` | Zur Suche |
+| `g d` | Zum Dashboard |
+| `g h/t` | Zur Startseite (Heute) |
+| `g m` | Zu Meine Aufgaben |
+| `g u` | Zu Anstehend |
+| `g i` | Zum Eingang |
+| `g s` | Zur Suche |
 | `N` | Neue Aufgabe erstellen |
-| `D` | Zum Dashboard |
-| `H` | Zur Startseite (Heute) |
-| `I` | Zur Inbox |
-| `U` | Zu Anstehend |
-| `S` | Zur Suche |
+| `/` | Zur Suche |
 | `?` | Shortcuts-Hilfe anzeigen |
 | `Escape` | Modal schließen |
 

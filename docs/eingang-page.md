@@ -452,12 +452,13 @@ Die Eingang-Seite ist in der Sidebar als zweiter Eintrag positioniert:
 
 ```
 Dashboard
-Eingang       ← Diese Seite
+Dashboard
 Heute
 Meine Aufgaben
 Anstehend
+Eingang       ← Diese Seite
 Suche
 Teams
 ```
 
-**Tastaturkürzel:** `i` navigiert zum Eingang
+**Tastaturkürzel:** `5` oder `g i` navigiert zum Eingang

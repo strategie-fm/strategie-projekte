@@ -28,19 +28,23 @@ export function KeyboardShortcutsProvider({ children }: { children: React.ReactN
             document.removeEventListener("keydown", handleSecondKey);
             switch (e2.key.toLowerCase()) {
               case "h":
+              case "t": // t = today = home
                 router.push("/");
                 break;
               case "i":
                 router.push("/inbox");
                 break;
-              case "t":
-                router.push("/today");
+              case "m":
+                router.push("/my-tasks");
                 break;
               case "u":
                 router.push("/upcoming");
                 break;
               case "s":
                 router.push("/search");
+                break;
+              case "d":
+                router.push("/dashboard");
                 break;
             }
           };
@@ -68,19 +72,27 @@ export function KeyboardShortcutsProvider({ children }: { children: React.ReactN
         break;
 
       case "1":
-        if (!hasModifier) router.push("/");
+        if (!hasModifier) router.push("/dashboard");
         break;
 
       case "2":
-        if (!hasModifier) router.push("/inbox");
+        if (!hasModifier) router.push("/");
         break;
 
       case "3":
-        if (!hasModifier) router.push("/today");
+        if (!hasModifier) router.push("/my-tasks");
         break;
 
       case "4":
         if (!hasModifier) router.push("/upcoming");
+        break;
+
+      case "5":
+        if (!hasModifier) router.push("/inbox");
+        break;
+
+      case "6":
+        if (!hasModifier) router.push("/search");
         break;
     }
   }, [router, pathname]);
