@@ -151,11 +151,12 @@ Detailansicht der ausgewählten Aufgabe. Wird nur angezeigt, wenn eine Aufgabe a
 - Kommentare (mit Zähler)
 
 **Aufgabe-Tab Felder:**
-1. Datum + Wiederholung (nebeneinander)
-2. Status + Priorität (nebeneinander)
-3. Zugewiesen
-4. Labels
-5. Beschreibung (auto-resize)
+1. **Aufgabenliste** (ProjectSelector) - ermöglicht Projekt-Zuweisung/Änderung
+2. Datum + Wiederholung (nebeneinander)
+3. Status + Priorität (nebeneinander)
+4. Zugewiesen
+5. Labels
+6. Beschreibung (auto-resize)
 
 **Props:**
 - `task`: Die ausgewählte Aufgabe
@@ -347,6 +348,7 @@ Die Seite reagiert auf folgende Custom Events:
 - `FormField` / `FormRow` - Formularlayout
 - `PrioritySelector` - Prioritätsauswahl (P1-P4)
 - `StatusSelector` - Statusauswahl (Offen/In Arbeit/Erledigt)
+- `ProjectSelector` - Projekt-/Aufgabenlisten-Auswahl
 - `AssigneeSelector` - Personenzuweisung
 - `LabelSelector` - Label-Auswahl
 - `RecurrenceSelector` - Wiederholungs-Einstellungen
@@ -379,6 +381,7 @@ src/
 │   │   ├── QuickAddTask.tsx        # Schnelleingabe
 │   │   ├── SubtaskList.tsx         # Unteraufgaben
 │   │   ├── CommentList.tsx         # Kommentare
+│   │   ├── ProjectSelector.tsx     # Projekt-Auswahl
 │   │   ├── LabelSelector.tsx       # Label-Auswahl
 │   │   ├── AssigneeSelector.tsx    # Zuweisungs-Auswahl
 │   │   └── RecurrenceSelector.tsx  # Wiederholungs-Auswahl
