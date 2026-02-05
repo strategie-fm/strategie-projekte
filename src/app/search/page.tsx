@@ -51,17 +51,24 @@ export default function SearchPage() {
     selectedStatus.length > 0 ||
     selectedAssignees.length > 0;
 
-  // Load data only when search/filters become active
-  const loadData = useCallback(async (silent = false) => {
+  // Load filter options (labels, profiles) on mount - always show all options
+  useEffect(() => {
+    const loadFilterOptions = async () => {
+      const [labelsData, profilesData] = await Promise.all([
+        getLabels(),
+        getProfiles(),
+      ]);
+      setLabels(labelsData);
+      setProfiles(profilesData);
+    };
+    loadFilterOptions();
+  }, []);
+
+  // Load tasks only when search/filters become active
+  const loadTasks = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
-    const [tasksData, labelsData, profilesData] = await Promise.all([
-      getTasks(),
-      getLabels(),
-      getProfiles(),
-    ]);
+    const tasksData = await getTasks();
     setAllTasks(tasksData);
-    setLabels(labelsData);
-    setProfiles(profilesData);
 
     // Build assignee map from batch-loaded data
     const assigneeMap: Record<string, string[]> = {};
@@ -74,12 +81,12 @@ export default function SearchPage() {
     if (!silent) setLoading(false);
   }, []);
 
-  // Lazy load: only load data when search/filters become active
+  // Lazy load tasks: only when search/filters become active
   useEffect(() => {
     if (hasActiveSearch && !dataLoaded) {
-      loadData();
+      loadTasks();
     }
-  }, [hasActiveSearch, dataLoaded, loadData]);
+  }, [hasActiveSearch, dataLoaded, loadTasks]);
 
   // Event listeners for live updates (only when data is loaded)
   useEffect(() => {
@@ -100,18 +107,18 @@ export default function SearchPage() {
   useEffect(() => {
     if (!dataLoaded) return;
 
-    const handleTaskLabelsChanged = () => loadData(true);
+    const handleTaskLabelsChanged = () => loadTasks(true);
     window.addEventListener("taskLabelsChanged", handleTaskLabelsChanged);
     return () => window.removeEventListener("taskLabelsChanged", handleTaskLabelsChanged);
-  }, [dataLoaded, loadData]);
+  }, [dataLoaded, loadTasks]);
 
   useEffect(() => {
     if (!dataLoaded) return;
 
-    const handleTaskUpdated = () => loadData(true);
+    const handleTaskUpdated = () => loadTasks(true);
     window.addEventListener("taskUpdated", handleTaskUpdated);
     return () => window.removeEventListener("taskUpdated", handleTaskUpdated);
-  }, [dataLoaded, loadData]);
+  }, [dataLoaded, loadTasks]);
 
   const handleTaskUpdate = (updatedTask: TaskWithRelations) => {
     setAllTasks((prev) =>
@@ -241,10 +248,10 @@ export default function SearchPage() {
           selected={selectedStatus}
           onChange={setSelectedStatus}
         />
-        {(dataLoaded ? assigneeOptions.length > 1 : true) && (
+        {assigneeOptions.length > 0 && (
           <FilterChips
             label="Person"
-            options={dataLoaded ? assigneeOptions : [{ value: "unassigned", label: "Nicht zugewiesen" }]}
+            options={assigneeOptions}
             selected={selectedAssignees}
             onChange={setSelectedAssignees}
           />
