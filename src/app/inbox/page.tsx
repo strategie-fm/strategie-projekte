@@ -1,17 +1,41 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Sidebar } from "@/components/layout/Sidebar";
+import { useState, useEffect, useCallback } from "react";
+import { AppLayout } from "@/components/layout/AppLayout";
 import { Header } from "@/components/layout/Header";
-import { SortableTaskList } from "@/components/tasks/SortableTaskList";
 import { SortableTaskItem } from "@/components/tasks/SortableTaskItem";
+import { TaskDetailView } from "@/components/tasks/TaskDetailView";
 import { QuickAddTask } from "@/components/tasks/QuickAddTask";
-import { TaskDetailPanel } from "@/components/tasks/TaskDetailPanel";
-import { getInboxTasks, getLabels } from "@/lib/database";
-import type { TaskWithRelations, Label } from "@/types/database";
-import { Inbox as InboxIcon, Check } from "lucide-react";
-import { TaskFilters, TaskFilterState, filterTasks } from "@/components/filters/TaskFilters";
+import { SectionHeader } from "@/components/ui/SectionHeader";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { FilterBar } from "@/components/ui/FilterBar";
+import { FilterChips } from "@/components/ui/FilterChips";
+import { ToggleSwitch } from "@/components/ui/ToggleSwitch";
+import { getInboxTasks, getTaskAssignees, getLabels, getProfiles } from "@/lib/database";
+import type { TaskWithRelations, Label, Profile } from "@/types/database";
+import { Inbox as InboxIcon, Check, Flag, Calendar } from "lucide-react";
+import { filterTasks } from "@/components/filters/TaskFilters";
 import { cn } from "@/lib/utils";
+
+// Filter options
+const priorityOptions = [
+  { value: "p1", label: "P1", dotColor: "bg-error" },
+  { value: "p2", label: "P2", dotColor: "bg-warning" },
+  { value: "p3", label: "P3", dotColor: "bg-info" },
+  { value: "p4", label: "P4", dotColor: "bg-text-muted" },
+];
+
+const statusOptions = [
+  { value: "todo", label: "Offen" },
+  { value: "in_progress", label: "In Arbeit" },
+];
+
+type GroupBy = "priority" | "date";
+
+const groupByOptions: { value: GroupBy; label: string; icon: typeof Flag }[] = [
+  { value: "priority", label: "Priorität", icon: Flag },
+  { value: "date", label: "Datum", icon: Calendar },
+];
 
 export default function InboxPage() {
   const [tasks, setTasks] = useState<TaskWithRelations[]>([]);
@@ -19,42 +43,113 @@ export default function InboxPage() {
   const [loading, setLoading] = useState(true);
   const [selectedTask, setSelectedTask] = useState<TaskWithRelations | null>(null);
   const [labels, setLabels] = useState<Label[]>([]);
-  const [filters, setFilters] = useState<TaskFilterState>({
-    priorities: [],
-    labels: [],
-    status: [],
-  });
+  const [profiles, setProfiles] = useState<Profile[]>([]);
+  const [taskAssigneeMap, setTaskAssigneeMap] = useState<Record<string, string[]>>({});
+
+  // Filter state
+  const [selectedPriorities, setSelectedPriorities] = useState<string[]>([]);
+  const [selectedLabels, setSelectedLabels] = useState<string[]>([]);
+  const [selectedStatus, setSelectedStatus] = useState<string[]>([]);
+  const [selectedAssignees, setSelectedAssignees] = useState<string[]>([]);
   const [showCompleted, setShowCompleted] = useState(false);
 
-  const loadTasks = async () => {
-    setLoading(true);
-    const [data, labelsData] = await Promise.all([
+  // Grouping state
+  const [groupBy, setGroupBy] = useState<GroupBy>("priority");
+
+  const loadData = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
+
+    const [data, labelsData, profilesData] = await Promise.all([
       getInboxTasks(),
       getLabels(),
+      getProfiles(),
     ]);
-    
+
+    // Build assignee map
+    const assigneeMap: Record<string, string[]> = {};
+    await Promise.all(
+      data.map(async (task) => {
+        const assignees = await getTaskAssignees(task.id);
+        assigneeMap[task.id] = assignees.map((a) => a.user_id);
+      })
+    );
+
     const active = data.filter((t) => t.status !== "done");
     const completed = data.filter((t) => t.status === "done");
-    
-    setTasks(active);
+
+    // Sort by priority then due date
+    const sortTasks = (a: TaskWithRelations, b: TaskWithRelations) => {
+      const priorityOrder = { p1: 0, p2: 1, p3: 2, p4: 3 };
+      if (priorityOrder[a.priority] !== priorityOrder[b.priority]) {
+        return priorityOrder[a.priority] - priorityOrder[b.priority];
+      }
+      if (a.due_date && b.due_date) {
+        return new Date(a.due_date).getTime() - new Date(b.due_date).getTime();
+      }
+      if (a.due_date) return -1;
+      if (b.due_date) return 1;
+      return 0;
+    };
+
+    setTasks(active.sort(sortTasks));
     setCompletedTasks(completed);
     setLabels(labelsData);
-    setLoading(false);
-  };
+    setProfiles(profilesData);
+    setTaskAssigneeMap(assigneeMap);
+    if (!silent) setLoading(false);
+  }, []);
 
   useEffect(() => {
-    loadTasks();
+    loadData();
+  }, [loadData]);
+
+  // Listen for assignee changes
+  useEffect(() => {
+    const handleAssigneesChanged = async (event: Event) => {
+      const taskId = (event as CustomEvent<string>).detail;
+      const assignees = await getTaskAssignees(taskId);
+      setTaskAssigneeMap((prev) => ({
+        ...prev,
+        [taskId]: assignees.map((a) => a.user_id),
+      }));
+    };
+
+    window.addEventListener("assigneesChanged", handleAssigneesChanged);
+    return () => {
+      window.removeEventListener("assigneesChanged", handleAssigneesChanged);
+    };
   }, []);
+
+  // Listen for label changes
+  useEffect(() => {
+    const handleLabelsChanged = () => {
+      loadData(true);
+    };
+
+    window.addEventListener("taskLabelsChanged", handleLabelsChanged);
+    return () => {
+      window.removeEventListener("taskLabelsChanged", handleLabelsChanged);
+    };
+  }, [loadData]);
+
+  // Listen for general task updates
+  useEffect(() => {
+    const handleTaskUpdated = () => {
+      loadData(true);
+    };
+
+    window.addEventListener("taskUpdated", handleTaskUpdated);
+    return () => {
+      window.removeEventListener("taskUpdated", handleTaskUpdated);
+    };
+  }, [loadData]);
 
   const handleTaskUpdate = (updatedTask: TaskWithRelations) => {
     if (updatedTask.status === "done") {
-      // Move to completed
       setTasks((prev) => prev.filter((t) => t.id !== updatedTask.id));
       setCompletedTasks((prev) => [updatedTask, ...prev.filter((t) => t.id !== updatedTask.id)]);
     } else {
-      // Remove from completed if was there
       setCompletedTasks((prev) => prev.filter((t) => t.id !== updatedTask.id));
-      // Update in active list or add back
       setTasks((prev) => {
         const exists = prev.some((t) => t.id === updatedTask.id);
         if (exists) {
@@ -74,111 +169,322 @@ export default function InboxPage() {
     setSelectedTask(null);
   };
 
-  const handleTaskCreated = () => {
-    loadTasks();
+  const handleTaskClick = (task: TaskWithRelations) => {
+    // Toggle selection: clicking the same task again deselects it
+    if (selectedTask?.id === task.id) {
+      setSelectedTask(null);
+    } else {
+      setSelectedTask(task);
+    }
   };
 
-  const filteredTasks = filterTasks(tasks, filters);
-  const filteredCompleted = filterTasks(completedTasks, filters);
+  const handleCloseDetail = () => {
+    setSelectedTask(null);
+  };
+
+  const handleTaskCreated = (task: TaskWithRelations) => {
+    loadData(true);
+    setSelectedTask(task);
+  };
+
+  const handleResetFilters = () => {
+    setSelectedPriorities([]);
+    setSelectedLabels([]);
+    setSelectedStatus([]);
+    setSelectedAssignees([]);
+    setShowCompleted(false);
+  };
+
+  // Build filters object
+  const filters = {
+    priorities: selectedPriorities,
+    labels: selectedLabels,
+    status: selectedStatus,
+    assignees: selectedAssignees,
+  };
+
+  const hasActiveFilters = selectedPriorities.length > 0 || selectedLabels.length > 0 || selectedStatus.length > 0 || selectedAssignees.length > 0;
+
+  // Apply filters
+  const filteredTasks = filterTasks(tasks, filters, taskAssigneeMap);
+  const filteredCompleted = filterTasks(completedTasks, filters, taskAssigneeMap);
+
+  // Grouping functions
+  const groupByPriority = (taskList: TaskWithRelations[]) => {
+    return {
+      p1: taskList.filter((t) => t.priority === "p1"),
+      p2: taskList.filter((t) => t.priority === "p2"),
+      p3: taskList.filter((t) => t.priority === "p3"),
+      p4: taskList.filter((t) => t.priority === "p4"),
+    };
+  };
+
+  const groupByDate = (taskList: TaskWithRelations[]) => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const overdue: TaskWithRelations[] = [];
+    const todayList: TaskWithRelations[] = [];
+    const upcoming: TaskWithRelations[] = [];
+    const noDate: TaskWithRelations[] = [];
+
+    taskList.forEach((task) => {
+      if (!task.due_date) {
+        noDate.push(task);
+        return;
+      }
+
+      const taskDate = new Date(task.due_date);
+      taskDate.setHours(0, 0, 0, 0);
+
+      if (taskDate < today) {
+        overdue.push(task);
+      } else if (taskDate.getTime() === today.getTime()) {
+        todayList.push(task);
+      } else {
+        upcoming.push(task);
+      }
+    });
+
+    return { overdue, today: todayList, upcoming, noDate };
+  };
+
+  // Get unique label IDs from tasks
+  const activeLabelIds = new Set(
+    tasks.flatMap((task) => task.labels?.map((l) => l.id) || [])
+  );
+
+  // Convert labels to filter options (only labels used in tasks)
+  const labelOptions = labels
+    .filter((label) => activeLabelIds.has(label.id))
+    .map((label) => ({
+      value: label.id,
+      label: label.name,
+      color: label.color,
+    }));
+
+  // Get unique assignee IDs from tasks
+  const activeAssigneeIds = new Set(
+    tasks.flatMap((task) => taskAssigneeMap[task.id] || [])
+  );
+
+  // Convert profiles to filter options (only users with tasks)
+  const assigneeOptions = profiles
+    .filter((profile) => activeAssigneeIds.has(profile.id))
+    .map((profile) => ({
+      value: profile.id,
+      label: profile.full_name || profile.email,
+    }));
+
+  // Render task item helper
+  const renderTaskItem = (task: TaskWithRelations) => (
+    <SortableTaskItem
+      key={task.id}
+      task={task}
+      onUpdate={handleTaskUpdate}
+      onClick={handleTaskClick}
+      onDelete={handleTaskDelete}
+      showProject={false}
+      hideDragHandle
+      isSelected={selectedTask?.id === task.id}
+    />
+  );
+
+  // Render grouped tasks based on groupBy
+  const renderGroupedTasks = () => {
+    if (filteredTasks.length === 0) {
+      return (
+        <EmptyState
+          icon={InboxIcon}
+          title={hasActiveFilters ? "Keine Aufgaben mit diesen Filtern" : "Dein Eingang ist leer"}
+          description={hasActiveFilters ? "Passe die Filter an" : "Aufgaben ohne Aufgabenliste landen hier"}
+        />
+      );
+    }
+
+    if (groupBy === "priority") {
+      const grouped = groupByPriority(filteredTasks);
+      return (
+        <>
+          {grouped.p1.length > 0 && (
+            <section className="mb-6">
+              <SectionHeader title="Priorität 1 - Dringend" count={grouped.p1.length} variant="error" />
+              <div className="flex flex-col gap-2">{grouped.p1.map((t) => renderTaskItem(t))}</div>
+            </section>
+          )}
+          {grouped.p2.length > 0 && (
+            <section className="mb-6">
+              <SectionHeader title="Priorität 2 - Hoch" count={grouped.p2.length} variant="warning" />
+              <div className="flex flex-col gap-2">{grouped.p2.map((t) => renderTaskItem(t))}</div>
+            </section>
+          )}
+          {grouped.p3.length > 0 && (
+            <section className="mb-6">
+              <SectionHeader title="Priorität 3 - Normal" count={grouped.p3.length} variant="info" />
+              <div className="flex flex-col gap-2">{grouped.p3.map((t) => renderTaskItem(t))}</div>
+            </section>
+          )}
+          {grouped.p4.length > 0 && (
+            <section className="mb-6">
+              <SectionHeader title="Priorität 4 - Niedrig" count={grouped.p4.length} variant="muted" />
+              <div className="flex flex-col gap-2">{grouped.p4.map((t) => renderTaskItem(t))}</div>
+            </section>
+          )}
+        </>
+      );
+    }
+
+    if (groupBy === "date") {
+      const grouped = groupByDate(filteredTasks);
+      return (
+        <>
+          {grouped.overdue.length > 0 && (
+            <section className="mb-6">
+              <SectionHeader title="Überfällig" count={grouped.overdue.length} variant="error" />
+              <div className="flex flex-col gap-2">{grouped.overdue.map((t) => renderTaskItem(t))}</div>
+            </section>
+          )}
+          {grouped.today.length > 0 && (
+            <section className="mb-6">
+              <SectionHeader title="Heute" count={grouped.today.length} variant="default" />
+              <div className="flex flex-col gap-2">{grouped.today.map((t) => renderTaskItem(t))}</div>
+            </section>
+          )}
+          {grouped.upcoming.length > 0 && (
+            <section className="mb-6">
+              <SectionHeader title="Demnächst" count={grouped.upcoming.length} variant="info" />
+              <div className="flex flex-col gap-2">{grouped.upcoming.map((t) => renderTaskItem(t))}</div>
+            </section>
+          )}
+          {grouped.noDate.length > 0 && (
+            <section className="mb-6">
+              <SectionHeader title="Ohne Datum" count={grouped.noDate.length} variant="muted" />
+              <div className="flex flex-col gap-2">{grouped.noDate.map((t) => renderTaskItem(t))}</div>
+            </section>
+          )}
+        </>
+      );
+    }
+
+    return null;
+  };
 
   return (
-    <div className="min-h-screen bg-background">
-      <Sidebar />
+    <AppLayout>
+      <Header title="Eingang" subtitle="Aufgaben ohne Aufgabenliste" />
 
-      <main className="ml-sidebar-width">
-        <Header title="Inbox" subtitle="Aufgaben ohne Aufgabenliste" />
+      {!loading && (
+        <FilterBar
+          onReset={handleResetFilters}
+          showReset={hasActiveFilters || showCompleted}
+        >
+          {/* Grouping Segmented Control */}
+          <div className="flex items-center gap-1 px-1 py-1 bg-divider rounded-lg">
+            {groupByOptions.map((option) => {
+              const Icon = option.icon;
+              const isActive = groupBy === option.value;
+              return (
+                <button
+                  key={option.value}
+                  onClick={() => setGroupBy(option.value)}
+                  className={cn(
+                    "flex items-center gap-1.5 px-3 py-1.5 rounded-md text-body-md font-medium transition-all",
+                    isActive
+                      ? "bg-surface text-primary shadow-sm"
+                      : "text-text-muted hover:text-text-primary"
+                  )}
+                >
+                  <Icon className="w-4 h-4" />
+                  {option.label}
+                </button>
+              );
+            })}
+          </div>
 
-        <div className="p-6">
+          <div className="w-px h-6 bg-border" />
+
+          <FilterChips
+            label="Priorität"
+            options={priorityOptions}
+            selected={selectedPriorities}
+            onChange={setSelectedPriorities}
+          />
+          <FilterChips
+            label="Status"
+            options={statusOptions}
+            selected={selectedStatus}
+            onChange={setSelectedStatus}
+          />
+          {assigneeOptions.length > 0 && (
+            <FilterChips
+              label="Zugewiesen"
+              options={assigneeOptions}
+              selected={selectedAssignees}
+              onChange={setSelectedAssignees}
+            />
+          )}
+          {labelOptions.length > 0 && (
+            <FilterChips
+              label="Labels"
+              options={labelOptions}
+              selected={selectedLabels}
+              onChange={setSelectedLabels}
+            />
+          )}
+          {completedTasks.length > 0 && (
+            <ToggleSwitch
+              label={`Erledigte anzeigen (${completedTasks.length})`}
+              checked={showCompleted}
+              onChange={setShowCompleted}
+            />
+          )}
+        </FilterBar>
+      )}
+
+      <div className="pt-6 flex gap-6">
+        {/* Left Column: Task Lists */}
+        <div className="flex-1 min-w-0">
           {loading ? (
             <div className="flex items-center justify-center py-12">
               <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
             </div>
           ) : (
             <>
-              {/* Filters */}
-              <div className="flex justify-end gap-2 mb-4">
-                <TaskFilters
-                  filters={filters}
-                  onFiltersChange={setFilters}
-                  availableLabels={labels}
-                />
-                {completedTasks.length > 0 && (
-                  <button
-                    onClick={() => setShowCompleted(!showCompleted)}
-                    className={cn(
-                      "flex items-center gap-2 px-3 py-1.5 text-sm rounded-lg transition-colors",
-                      showCompleted
-                        ? "bg-primary-surface text-primary"
-                        : "text-text-muted hover:text-text-primary hover:bg-divider"
-                    )}
-                  >
-                    <Check className="w-4 h-4" />
-                    Erledigte ({completedTasks.length})
-                  </button>
-                )}
-              </div>
+              {renderGroupedTasks()}
 
-              {/* Active Tasks */}
-              <section className="mb-6">
-                {filteredTasks.length > 0 ? (
-                  <SortableTaskList
-                    tasks={filteredTasks}
-                    onTasksReorder={setTasks}
-                    onTaskUpdate={handleTaskUpdate}
-                    onTaskClick={setSelectedTask}
-                    showProject={false}
-                  />
-                ) : (
-                  <div className="bg-surface rounded-xl shadow-sm border border-border p-12 text-center">
-                    <InboxIcon className="w-12 h-12 text-text-muted mx-auto mb-4" />
-                    <p className="text-text-muted mb-2">
-                      {filters.priorities.length > 0 || filters.labels.length > 0
-                        ? "Keine Aufgaben mit diesen Filtern"
-                        : "Deine Inbox ist leer"}
-                    </p>
-                    <p className="text-sm text-text-muted">
-                      {filters.priorities.length > 0 || filters.labels.length > 0
-                        ? "Passe die Filter an"
-                        : "Aufgaben ohne Aufgabenliste landen hier"}
-                    </p>
-                  </div>
-                )}
-              </section>
-
-              {/* Erledigte Section */}
+              {/* Completed Tasks */}
               {showCompleted && filteredCompleted.length > 0 && (
                 <section className="mb-6">
-                  <h2 className="text-sm font-semibold text-text-muted mb-3 flex items-center gap-2">
-                    <Check className="w-4 h-4" />
-                    Erledigt ({filteredCompleted.length})
-                  </h2>
-                  <div className="bg-surface rounded-xl shadow-sm border border-border opacity-60">
-                    {filteredCompleted.map((task) => (
-                      <SortableTaskItem
-                        key={task.id}
-                        task={task}
-                        onUpdate={handleTaskUpdate}
-                        onClick={setSelectedTask}
-                        showProject={false}
-                      />
-                    ))}
+                  <SectionHeader
+                    title="Erledigt"
+                    count={filteredCompleted.length}
+                    icon={Check}
+                    variant="muted"
+                  />
+                  <div className="flex flex-col gap-2">
+                    {filteredCompleted.map((task) => renderTaskItem(task))}
                   </div>
                 </section>
               )}
 
+              {/* Quick Add */}
               <QuickAddTask onTaskCreated={handleTaskCreated} />
             </>
           )}
         </div>
-      </main>
 
-      <TaskDetailPanel
-        task={selectedTask}
-        isOpen={!!selectedTask}
-        onClose={() => setSelectedTask(null)}
-        onUpdate={handleTaskUpdate}
-        onDelete={handleTaskDelete}
-      />
-    </div>
+        {/* Right Column: Task Detail View - only show when task is selected */}
+        {selectedTask && (
+          <div className="w-[500px] shrink min-w-[320px] sticky top-6 self-start max-h-[calc(100vh-120px)]">
+            <TaskDetailView
+              task={selectedTask}
+              onUpdate={handleTaskUpdate}
+              onDelete={handleTaskDelete}
+              onClose={handleCloseDetail}
+            />
+          </div>
+        )}
+      </div>
+    </AppLayout>
   );
 }

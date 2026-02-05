@@ -9,16 +9,13 @@ import {
   User,
   Users,
   Inbox,
-  Calendar,
   CalendarDays,
   Search,
   Plus,
-  FolderOpen,
   LogOut,
   ChevronDown,
   ChevronRight,
   X,
-  GripVertical,
   ListTodo,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
@@ -34,10 +31,9 @@ const DEFAULT_WIDTH = 256;
 
 const navItems = [
   { href: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
+  { href: "/inbox", icon: Inbox, label: "Eingang" },
   { href: "/", icon: Home, label: "Heute" },
   { href: "/my-tasks", icon: User, label: "Meine Aufgaben" },
-  { href: "/inbox", icon: Inbox, label: "Inbox" },
-  { href: "/today", icon: Calendar, label: "Heute" },
   { href: "/upcoming", icon: CalendarDays, label: "Anstehend" },
   { href: "/search", icon: Search, label: "Suche" },
   { href: "/teams", icon: Users, label: "Teams" },
