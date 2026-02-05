@@ -1,12 +1,18 @@
 import { supabase } from "./supabase";
 import type { Project, Task, TaskWithRelations, Label, Comment, Section, Profile, TaskAssignee, TaskRecurrence, RecurrenceType } from "@/types/database";
 
+// Helper: Schneller User-Zugriff über Session-Cache statt Netzwerk-Request
+async function getCurrentUser() {
+  const { data: { session } } = await supabase.auth.getSession();
+  return session?.user ?? null;
+}
+
 // ============================================
 // PROJECTS
 // ============================================
 
 export async function getProjects(): Promise<Project[]> {
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
   if (!user) return [];
 
   // RLS handles access control - no need to filter by created_by
@@ -44,7 +50,7 @@ export async function createProject(project: {
   description?: string;
   color?: string;
 }): Promise<Project | null> {
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
   if (!user) return null;
 
   const { data, error } = await supabase
@@ -138,7 +144,7 @@ export async function unarchiveProject(id: string): Promise<Project | null> {
 }
 
 export async function getArchivedProjects(): Promise<Project[]> {
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
   if (!user) return [];
 
   const { data, error } = await supabase
@@ -185,9 +191,9 @@ function parseViewTask(viewTask: Record<string, unknown>): TaskWithRelations {
 }
 
 export async function getTasks(options?: { excludeCompleted?: boolean }): Promise<TaskWithRelations[]> {
-  console.time("getTasks: auth.getUser");
-  const { data: { user } } = await supabase.auth.getUser();
-  console.timeEnd("getTasks: auth.getUser");
+  console.time("getTasks: getCurrentUser (cached)");
+  const user = await getCurrentUser();
+  console.timeEnd("getTasks: getCurrentUser (cached)");
   if (!user) return [];
 
   // Use view for single-query loading of all relations
@@ -217,7 +223,7 @@ export async function getCompletedTasks(options?: {
   dueDateLte?: string;  // Only get completed tasks with due_date <= this date
   projectId?: string;   // Filter by project
 }): Promise<TaskWithRelations[]> {
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
   if (!user) return [];
 
   // Use view for single-query loading
@@ -250,7 +256,7 @@ export async function getCompletedTasks(options?: {
 }
 
 export async function getTasksByProject(projectId: string): Promise<TaskWithRelations[]> {
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
   if (!user) return [];
 
   // Get task IDs for this project first (needed for filtering view)
@@ -282,7 +288,7 @@ export async function getTasksByProject(projectId: string): Promise<TaskWithRela
 }
 
 export async function getInboxTasks(): Promise<TaskWithRelations[]> {
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
   if (!user) return [];
 
   // Use view and filter for tasks without projects (inbox)
@@ -312,7 +318,7 @@ export async function createTask(task: {
   project_id?: string;
   section_id?: string;
 }): Promise<Task | null> {
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
   if (!user) return null;
 
   const { data: newTask, error: taskError } = await supabase
@@ -354,7 +360,7 @@ export async function updateTask(
   id: string,
   updates: Partial<Pick<Task, "title" | "description" | "status" | "priority" | "due_date" | "completed_at" | "position" | "section_id">>
 ): Promise<Task | null> {
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
   
   const { data, error } = await supabase
     .from("tasks")
@@ -427,7 +433,7 @@ export async function updateTaskProject(taskId: string, projectId: string | null
 }
 
 export async function searchTasks(query: string): Promise<TaskWithRelations[]> {
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
   if (!user || !query.trim()) return [];
 
   // RLS handles access control - search across all accessible tasks
@@ -531,7 +537,7 @@ export async function createSubtask(
   parentTaskId: string,
   title: string
 ): Promise<Task | null> {
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
   if (!user) return null;
 
   const { data, error } = await supabase
@@ -590,9 +596,9 @@ export async function getSubtaskCount(taskIds: string[]): Promise<Record<string,
 // ============================================
 
 export async function getLabels(): Promise<Label[]> {
-  console.time("getLabels: auth.getUser");
-  const { data: { user } } = await supabase.auth.getUser();
-  console.timeEnd("getLabels: auth.getUser");
+  console.time("getLabels: getCurrentUser (cached)");
+  const user = await getCurrentUser();
+  console.timeEnd("getLabels: getCurrentUser (cached)");
   if (!user) return [];
 
   // Labels are personal - keep created_by filter
@@ -616,7 +622,7 @@ export async function createLabel(label: {
   name: string;
   color?: string;
 }): Promise<Label | null> {
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
   if (!user) return null;
 
   const { data, error } = await supabase
@@ -726,7 +732,7 @@ export async function getComments(taskId: string): Promise<Comment[]> {
 }
 
 export async function createComment(taskId: string, content: string): Promise<Comment | null> {
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
   if (!user) return null;
 
   const { data, error } = await supabase
@@ -788,7 +794,7 @@ export async function getSections(projectId: string): Promise<Section[]> {
 }
 
 export async function createSection(projectId: string, name: string): Promise<Section | null> {
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
   if (!user) return null;
 
   // Get max position
@@ -854,7 +860,7 @@ export async function deleteSection(id: string): Promise<boolean> {
 }
 
 export async function moveTaskToSection(taskId: string, sectionId: string | null): Promise<boolean> {
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
   
   const { error } = await supabase
     .from("tasks")
@@ -903,7 +909,7 @@ export async function getProjectProgress(projectId: string): Promise<{ total: nu
 }
 
 export async function getAllProjectsProgress(): Promise<Record<string, { total: number; completed: number }>> {
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
   if (!user) return {};
 
   // RLS handles access control - get all accessible projects
@@ -1015,7 +1021,7 @@ export async function getTaskAssignees(taskId: string): Promise<TaskAssignee[]> 
 }
 
 export async function assignTask(taskId: string, userId: string): Promise<TaskAssignee | null> {
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
   
   const { data, error } = await supabase
     .from("task_assignees")
@@ -1102,7 +1108,7 @@ export async function getTeam(teamId: string): Promise<TeamWithMembers | null> {
 }
 
 export async function createTeam(name: string, description?: string, color?: string): Promise<Team | null> {
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
   if (!user) return null;
 
   const { data: team, error: teamError } = await supabase
@@ -1270,7 +1276,7 @@ export async function getProjectTeamAccess(projectId: string): Promise<ProjectTe
 }
 
 export async function grantProjectAccess(projectId: string, teamId: string, accessLevel: AccessLevel = "view"): Promise<ProjectTeamAccess | null> {
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
 
   const { data, error } = await supabase
     .from("project_team_access")
@@ -1541,7 +1547,7 @@ export async function completeRecurringTask(taskId: string): Promise<TaskWithRel
   );
 
   // 4. Erstelle neue Aufgabe
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
   
   const { data: newTask, error: createError } = await supabase
     .from("tasks")
