@@ -11,6 +11,8 @@ interface SectionHeaderProps {
   count?: number;
   icon?: LucideIcon;
   variant?: SectionVariant;
+  dotColor?: string; // Custom color for dot (e.g., project color)
+  dotShape?: "round" | "square"; // Shape of the dot indicator
   className?: string;
   children?: ReactNode;
 }
@@ -43,6 +45,8 @@ export function SectionHeader({
   count,
   icon: Icon,
   variant = "default",
+  dotColor,
+  dotShape = "round",
   className,
   children,
 }: SectionHeaderProps) {
@@ -54,7 +58,14 @@ export function SectionHeader({
         {Icon ? (
           <Icon className="w-4 h-4" />
         ) : (
-          <span className={cn("w-2 h-2 rounded-full", styles.dot)} />
+          <span
+            className={cn(
+              "w-2 h-2",
+              dotShape === "round" ? "rounded-full" : "rounded-sm",
+              !dotColor && styles.dot
+            )}
+            style={dotColor ? { backgroundColor: dotColor } : undefined}
+          />
         )}
         {title}
         {count !== undefined && ` (${count})`}
