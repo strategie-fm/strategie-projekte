@@ -103,12 +103,17 @@ export default function TeamsPage() {
   const handleDeleteTeam = async (teamId: string) => {
     if (!confirm("Team wirklich löschen? Alle Zuweisungen werden entfernt.")) return;
 
+    console.log("Deleting team:", teamId);
     const success = await deleteTeam(teamId);
+    console.log("Delete result:", success);
+
     if (success) {
       setTeams((prev) => prev.filter((t) => t.id !== teamId));
       if (selectedTeam?.id === teamId) {
         setSelectedTeam(null);
       }
+    } else {
+      alert("Fehler beim Löschen des Teams. Bitte prüfe die Browser-Konsole für Details.");
     }
   };
 
