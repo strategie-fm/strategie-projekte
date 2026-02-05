@@ -2,13 +2,13 @@
 
 import { useState, useEffect } from "react";
 import { X, Calendar, Flag, Folder, Trash2, AlertCircle, Layers, PlayCircle, RotateCcw } from "lucide-react";
-import { updateTask, deleteTask, getProjects, getSections, moveTaskToSection, completeRecurringTask, getTaskRecurrence } from "@/lib/database";
+import { updateTask, deleteTask, getSections, moveTaskToSection, completeRecurringTask } from "@/lib/database";
 import type { Section, TaskRecurrence } from "@/types/database";
 import { SubtaskList } from "./SubtaskList";
 import { LabelSelector } from "./LabelSelector";
 import { CommentList } from "./CommentList";
 import { RecurrenceSelector } from "./RecurrenceSelector";
-import type { TaskWithRelations, Project } from "@/types/database";
+import type { TaskWithRelations } from "@/types/database";
 import { cn } from "@/lib/utils";
 import { AssigneeSelector } from "./AssigneeSelector";
 
@@ -43,9 +43,7 @@ export function TaskDetailPanel({
   const [isSaving, setIsSaving] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [projects, setProjects] = useState<Project[]>([]);
   const [sections, setSections] = useState<Section[]>([]);
-  const [recurrence, setRecurrence] = useState<TaskRecurrence | null>(null);
 
   useEffect(() => {
     if (task) {
@@ -54,19 +52,10 @@ export function TaskDetailPanel({
       setPriority(task.priority);
       setDueDate(task.due_date?.split("T")[0] || "");
       setShowDeleteConfirm(false);
-      
-      // Load recurrence data
-      if (task.is_recurring) {
-        getTaskRecurrence(task.id).then(setRecurrence);
-      } else {
-        setRecurrence(null);
-      }
     }
   }, [task]);
 
   useEffect(() => {
-    getProjects().then(setProjects);
-    
     // Load sections if task has a project
     if (task?.projects?.[0]?.id) {
       getSections(task.projects[0].id).then(setSections);
@@ -151,7 +140,6 @@ export function TaskDetailPanel({
   };
 
   const handleRecurrenceChange = (newRecurrence: TaskRecurrence | null) => {
-    setRecurrence(newRecurrence);
     if (task) {
       onUpdate({ ...task, is_recurring: !!newRecurrence });
     }

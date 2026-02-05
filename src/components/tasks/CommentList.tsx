@@ -5,7 +5,6 @@ import { Send, Trash2, MessageSquare } from "lucide-react";
 import { getComments, createComment, deleteComment } from "@/lib/database";
 import { supabase } from "@/lib/supabase";
 import type { Comment } from "@/types/database";
-import { cn } from "@/lib/utils";
 
 interface CommentListProps {
   taskId: string;

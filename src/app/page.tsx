@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Header } from "@/components/layout/Header";
 import { SortableTaskList } from "@/components/tasks/SortableTaskList";
@@ -56,14 +56,11 @@ export default function Home() {
       getProfiles(),
     ]);
 
-    // Load assignees for all tasks
+    // Build assignee map from task.assignees (now batch-loaded in getTasks)
     const assigneeMap: Record<string, string[]> = {};
-    await Promise.all(
-      allTasks.map(async (task) => {
-        const assignees = await getTaskAssignees(task.id);
-        assigneeMap[task.id] = assignees.map((a) => a.user_id);
-      })
-    );
+    allTasks.forEach((task) => {
+      assigneeMap[task.id] = (task.assignees || []).map((a) => a.user_id);
+    });
     setTaskAssigneeMap(assigneeMap);
 
     const today = new Date();
@@ -227,46 +224,58 @@ export default function Home() {
     year: "numeric",
   });
 
-  // Build filters object for filterTasks function
-  const filters = {
+  // Memoize filters object
+  const filters = useMemo(() => ({
     priorities: selectedPriorities,
     labels: selectedLabels,
     status: selectedStatus,
     assignees: selectedAssignees,
-  };
+  }), [selectedPriorities, selectedLabels, selectedStatus, selectedAssignees]);
 
   const hasActiveFilters = selectedPriorities.length > 0 || selectedLabels.length > 0 || selectedStatus.length > 0 || selectedAssignees.length > 0;
-  const filteredOverdue = filterTasks(overdueTasks, filters, taskAssigneeMap);
-  const filteredToday = filterTasks(todayTasks, filters, taskAssigneeMap);
-  const filteredCompleted = filterTasks(completedTasks, filters, taskAssigneeMap);
 
-  // Get unique label IDs from overdue and today tasks only
-  const relevantTasks = [...overdueTasks, ...todayTasks];
-  const activeLabelIds = new Set(
-    relevantTasks.flatMap((task) => task.labels?.map((l) => l.id) || [])
+  // Memoize filtered task lists
+  const filteredOverdue = useMemo(
+    () => filterTasks(overdueTasks, filters, taskAssigneeMap),
+    [overdueTasks, filters, taskAssigneeMap]
+  );
+  const filteredToday = useMemo(
+    () => filterTasks(todayTasks, filters, taskAssigneeMap),
+    [todayTasks, filters, taskAssigneeMap]
+  );
+  const filteredCompleted = useMemo(
+    () => filterTasks(completedTasks, filters, taskAssigneeMap),
+    [completedTasks, filters, taskAssigneeMap]
   );
 
-  // Convert labels to filter options (only labels used in overdue/today tasks)
-  const labelOptions = labels
-    .filter((label) => activeLabelIds.has(label.id))
-    .map((label) => ({
-      value: label.id,
-      label: label.name,
-      color: label.color,
-    }));
+  // Memoize label options
+  const labelOptions = useMemo(() => {
+    const relevantTasks = [...overdueTasks, ...todayTasks];
+    const activeLabelIds = new Set(
+      relevantTasks.flatMap((task) => task.labels?.map((l) => l.id) || [])
+    );
+    return labels
+      .filter((label) => activeLabelIds.has(label.id))
+      .map((label) => ({
+        value: label.id,
+        label: label.name,
+        color: label.color,
+      }));
+  }, [overdueTasks, todayTasks, labels]);
 
-  // Get unique assignee IDs from overdue and today tasks only
-  const activeAssigneeIds = new Set(
-    relevantTasks.flatMap((task) => taskAssigneeMap[task.id] || [])
-  );
-
-  // Convert profiles to filter options (only users with overdue/today tasks)
-  const assigneeOptions = profiles
-    .filter((profile) => activeAssigneeIds.has(profile.id))
-    .map((profile) => ({
-      value: profile.id,
-      label: profile.full_name || profile.email,
-    }));
+  // Memoize assignee options
+  const assigneeOptions = useMemo(() => {
+    const relevantTasks = [...overdueTasks, ...todayTasks];
+    const activeAssigneeIds = new Set(
+      relevantTasks.flatMap((task) => taskAssigneeMap[task.id] || [])
+    );
+    return profiles
+      .filter((profile) => activeAssigneeIds.has(profile.id))
+      .map((profile) => ({
+        value: profile.id,
+        label: profile.full_name || profile.email,
+      }));
+  }, [overdueTasks, todayTasks, profiles, taskAssigneeMap]);
 
   return (
     <AppLayout>

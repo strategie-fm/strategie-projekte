@@ -19,7 +19,8 @@ export function DroppableSection({ id, children, isEmpty }: DroppableSectionProp
       ref={setNodeRef}
       className={cn(
         "transition-colors rounded-xl",
-        isOver && "bg-primary-surface/50 ring-2 ring-primary ring-offset-2"
+        isOver && "bg-primary-surface/50 ring-2 ring-primary ring-offset-2",
+        isEmpty && isOver && "min-h-[60px]"
       )}
     >
       {children}

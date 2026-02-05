@@ -73,7 +73,7 @@ export interface Task {
 
 export interface TaskWithRelations extends Task {
   projects?: Project[];
-  assignees?: Profile[];
+  assignees?: TaskAssignee[];
   labels?: Label[];
   subtasks?: Task[];
   subtaskCount?: {

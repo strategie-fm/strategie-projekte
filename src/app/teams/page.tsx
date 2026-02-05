@@ -5,20 +5,13 @@ import { Sidebar } from "@/components/layout/Sidebar";
 import { Header } from "@/components/layout/Header";
 import { getTeams, getTeam, createTeam, deleteTeam, getProfiles, addTeamMember, removeTeamMember, updateTeamMemberRole } from "@/lib/database";
 import type { Team, TeamWithMembers, Profile, TeamRole } from "@/types/database";
-import { Users, Plus, X, Settings, Trash2, UserPlus, Crown, Shield, User, Eye } from "lucide-react";
+import { Users, Plus, X, Trash2, UserPlus } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const TEAM_COLORS = [
   "#183c6c", "#059669", "#dc2626", "#f59e0b", "#8b5cf6", 
   "#ec4899", "#06b6d4", "#84cc16", "#f97316", "#6366f1"
 ];
-
-const ROLE_CONFIG: Record<TeamRole, { label: string; icon: typeof Crown; color: string }> = {
-  owner: { label: "Owner", icon: Crown, color: "text-warning" },
-  admin: { label: "Admin", icon: Shield, color: "text-error" },
-  member: { label: "Mitglied", icon: User, color: "text-text-secondary" },
-  viewer: { label: "Betrachter", icon: Eye, color: "text-text-muted" },
-};
 
 export default function TeamsPage() {
   const [teams, setTeams] = useState<Team[]>([]);
@@ -262,7 +255,6 @@ export default function TeamsPage() {
                         {selectedTeam.members.map((member) => {
                           const profile = member.profile;
                           const displayName = profile?.full_name || profile?.email.split("@")[0] || "Unbekannt";
-                          const RoleIcon = ROLE_CONFIG[member.role]?.icon || User;
 
                           return (
                             <div

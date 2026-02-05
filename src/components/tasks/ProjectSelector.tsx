@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Folder, ChevronDown, Check, X } from "lucide-react";
+import { Folder, ChevronDown, Check } from "lucide-react";
 import { getProjects, updateTaskProject } from "@/lib/database";
 import type { Project } from "@/types/database";
 import { cn } from "@/lib/utils";

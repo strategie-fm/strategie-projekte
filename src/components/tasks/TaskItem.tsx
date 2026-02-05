@@ -156,11 +156,11 @@ export function TaskItem({ task, onUpdate, onClick, showProject = true }: TaskIt
         <div className="flex -space-x-1">
           {task.assignees.slice(0, 3).map((assignee) => (
             <div
-              key={assignee.id}
+              key={assignee.user_id}
               className="w-6 h-6 rounded-full bg-primary-surface text-primary text-[10px] font-medium flex items-center justify-center border-2 border-surface"
-              title={assignee.full_name || assignee.email}
+              title={assignee.profile?.full_name || assignee.profile?.email || "Unbekannt"}
             >
-              {(assignee.full_name || assignee.email).charAt(0).toUpperCase()}
+              {(assignee.profile?.full_name || assignee.profile?.email || "?").charAt(0).toUpperCase()}
             </div>
           ))}
         </div>

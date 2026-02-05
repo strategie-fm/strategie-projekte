@@ -197,10 +197,16 @@ export async function getTasks(): Promise<TaskWithRelations[]> {
     .select("task_id, label_id, labels(*)")
     .in("task_id", taskIds);
 
+  // Load assignees for all tasks
+  const { data: taskAssignees } = await supabase
+    .from("task_assignees")
+    .select("task_id, user_id, profile:profiles!task_assignees_user_id_fkey(*)")
+    .in("task_id", taskIds);
+
   return tasks.map((task) => {
     const projectLinks = taskProjects?.filter(tp => tp.task_id === task.id) || [];
     const projects: Project[] = [];
-    
+
     projectLinks.forEach(tp => {
       if (tp.projects && typeof tp.projects === 'object' && !Array.isArray(tp.projects)) {
         projects.push(tp.projects as unknown as Project);
@@ -209,17 +215,25 @@ export async function getTasks(): Promise<TaskWithRelations[]> {
 
     const labelLinks = taskLabels?.filter(tl => tl.task_id === task.id) || [];
     const labels: Label[] = [];
-    
+
     labelLinks.forEach(tl => {
       if (tl.labels && typeof tl.labels === 'object' && !Array.isArray(tl.labels)) {
         labels.push(tl.labels as unknown as Label);
       }
     });
-    
+
+    // Map assignees
+    const assigneeLinks = taskAssignees?.filter(ta => ta.task_id === task.id) || [];
+    const assignees: TaskAssignee[] = assigneeLinks.map(ta => ({
+      task_id: ta.task_id,
+      user_id: ta.user_id,
+      profile: ta.profile as unknown as Profile,
+    })) as TaskAssignee[];
+
     return {
       ...task,
       projects,
-      assignees: [],
+      assignees,
       labels,
       subtaskCount: subtaskCounts[task.id] || undefined,
     };
@@ -271,20 +285,34 @@ export async function getTasksByProject(projectId: string): Promise<TaskWithRela
     .select("task_id, label_id, labels(*)")
     .in("task_id", taskIds);
 
+  // Load assignees
+  const { data: taskAssignees } = await supabase
+    .from("task_assignees")
+    .select("task_id, user_id, profile:profiles!task_assignees_user_id_fkey(*)")
+    .in("task_id", taskIds);
+
   return (tasks || []).map((task) => {
     const labelLinks = taskLabels?.filter(tl => tl.task_id === task.id) || [];
     const labels: Label[] = [];
-    
+
     labelLinks.forEach(tl => {
       if (tl.labels && typeof tl.labels === 'object' && !Array.isArray(tl.labels)) {
         labels.push(tl.labels as unknown as Label);
       }
     });
 
+    // Map assignees
+    const assigneeLinks = taskAssignees?.filter(ta => ta.task_id === task.id) || [];
+    const assignees: TaskAssignee[] = assigneeLinks.map(ta => ({
+      task_id: ta.task_id,
+      user_id: ta.user_id,
+      profile: ta.profile as unknown as Profile,
+    })) as TaskAssignee[];
+
     return {
       ...task,
       projects: project ? [project] : [],
-      assignees: [],
+      assignees,
       labels,
       subtaskCount: subtaskCounts[task.id] || undefined,
       section_id: task.section_id,
@@ -339,20 +367,34 @@ export async function getInboxTasks(): Promise<TaskWithRelations[]> {
     .select("task_id, label_id, labels(*)")
     .in("task_id", inboxTaskIds);
 
+  // Load assignees
+  const { data: taskAssignees } = await supabase
+    .from("task_assignees")
+    .select("task_id, user_id, profile:profiles!task_assignees_user_id_fkey(*)")
+    .in("task_id", inboxTaskIds);
+
   return inboxTasks.map((task) => {
     const labelLinks = taskLabels?.filter(tl => tl.task_id === task.id) || [];
     const labels: Label[] = [];
-    
+
     labelLinks.forEach(tl => {
       if (tl.labels && typeof tl.labels === 'object' && !Array.isArray(tl.labels)) {
         labels.push(tl.labels as unknown as Label);
       }
     });
 
+    // Map assignees
+    const assigneeLinks = taskAssignees?.filter(ta => ta.task_id === task.id) || [];
+    const assignees: TaskAssignee[] = assigneeLinks.map(ta => ({
+      task_id: ta.task_id,
+      user_id: ta.user_id,
+      profile: ta.profile as unknown as Profile,
+    })) as TaskAssignee[];
+
     return {
       ...task,
       projects: [],
-      assignees: [],
+      assignees,
       labels,
       subtaskCount: subtaskCounts[task.id] || undefined,
     };
@@ -520,10 +562,16 @@ export async function searchTasks(query: string): Promise<TaskWithRelations[]> {
     .select("task_id, label_id, labels(*)")
     .in("task_id", taskIds);
 
+  // Load assignees
+  const { data: taskAssignees } = await supabase
+    .from("task_assignees")
+    .select("task_id, user_id, profile:profiles!task_assignees_user_id_fkey(*)")
+    .in("task_id", taskIds);
+
   return tasks.map((task) => {
     const projectLinks = taskProjects?.filter(tp => tp.task_id === task.id) || [];
     const projects: Project[] = [];
-    
+
     projectLinks.forEach(tp => {
       if (tp.projects && typeof tp.projects === 'object' && !Array.isArray(tp.projects)) {
         projects.push(tp.projects as unknown as Project);
@@ -532,17 +580,25 @@ export async function searchTasks(query: string): Promise<TaskWithRelations[]> {
 
     const labelLinks = taskLabels?.filter(tl => tl.task_id === task.id) || [];
     const labels: Label[] = [];
-    
+
     labelLinks.forEach(tl => {
       if (tl.labels && typeof tl.labels === 'object' && !Array.isArray(tl.labels)) {
         labels.push(tl.labels as unknown as Label);
       }
     });
-    
+
+    // Map assignees
+    const assigneeLinks = taskAssignees?.filter(ta => ta.task_id === task.id) || [];
+    const assignees: TaskAssignee[] = assigneeLinks.map(ta => ({
+      task_id: ta.task_id,
+      user_id: ta.user_id,
+      profile: ta.profile as unknown as Profile,
+    })) as TaskAssignee[];
+
     return {
       ...task,
       projects,
-      assignees: [],
+      assignees,
       labels,
       subtaskCount: subtaskCounts[task.id] || undefined,
     };

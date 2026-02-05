@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { Calendar, Trash2, Folder, RotateCcw, PlayCircle, Flag, ListTodo, MessageSquare, X } from "lucide-react";
-import { updateTask, deleteTask, completeRecurringTask, getTaskRecurrence, getSubtasks, getComments } from "@/lib/database";
+import { updateTask, deleteTask, completeRecurringTask, getSubtasks, getComments } from "@/lib/database";
 import type { TaskRecurrence } from "@/types/database";
 import { SubtaskList } from "./SubtaskList";
 import { LabelSelector } from "./LabelSelector";
@@ -42,7 +42,6 @@ export function TaskDetailView({
   const [isSaving, setIsSaving] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [recurrence, setRecurrence] = useState<TaskRecurrence | null>(null);
   const [activeTab, setActiveTab] = useState<TabType>("task");
   const [subtaskCount, setSubtaskCount] = useState(0);
   const [commentCount, setCommentCount] = useState(0);
@@ -65,12 +64,6 @@ export function TaskDetailView({
       setDueDate(task.due_date?.split("T")[0] || "");
       setShowDeleteConfirm(false);
       setActiveTab("task");
-
-      if (task.is_recurring) {
-        getTaskRecurrence(task.id).then(setRecurrence);
-      } else {
-        setRecurrence(null);
-      }
 
       loadCounts(task.id);
     }
@@ -156,7 +149,6 @@ export function TaskDetailView({
   };
 
   const handleRecurrenceChange = (newRecurrence: TaskRecurrence | null) => {
-    setRecurrence(newRecurrence);
     if (task) {
       onUpdate({ ...task, is_recurring: !!newRecurrence });
     }

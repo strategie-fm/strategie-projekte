@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, memo } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { GripVertical, RotateCcw, ListTodo, Trash2 } from "lucide-react";
@@ -21,7 +21,7 @@ interface SortableTaskItemProps {
   isDragging?: boolean;
 }
 
-export function SortableTaskItem({
+export const SortableTaskItem = memo(function SortableTaskItem({
   task,
   onUpdate,
   onClick,
@@ -33,12 +33,19 @@ export function SortableTaskItem({
   isOverdue = false,
   isDragging,
 }: SortableTaskItemProps) {
-  const [assignees, setAssignees] = useState<TaskAssignee[]>([]);
+  // Use assignees from task prop (batch-loaded) as initial state
+  const [assignees, setAssignees] = useState<TaskAssignee[]>(task.assignees || []);
   const isCompleted = task.status === "done";
 
+  // Update assignees when task prop changes
   useEffect(() => {
-    getTaskAssignees(task.id).then(setAssignees);
+    if (task.assignees && task.assignees.length > 0) {
+      setAssignees(task.assignees);
+    }
+  }, [task.assignees]);
 
+  // Listen for assignee changes (only reload when explicitly changed)
+  useEffect(() => {
     const handleAssigneesChanged = (e: Event) => {
       const customEvent = e as CustomEvent<string>;
       if (customEvent.detail === task.id) {
@@ -388,4 +395,4 @@ export function SortableTaskItem({
       </div>
     </div>
   );
-}
+});
