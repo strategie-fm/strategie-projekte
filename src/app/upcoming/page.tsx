@@ -1,16 +1,33 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Sidebar } from "@/components/layout/Sidebar";
+import { AppLayout } from "@/components/layout/AppLayout";
 import { Header } from "@/components/layout/Header";
 import { SortableTaskItem } from "@/components/tasks/SortableTaskItem";
-import { TaskDetailPanel } from "@/components/tasks/TaskDetailPanel";
 import { QuickAddTask } from "@/components/tasks/QuickAddTask";
-import { getTasks, getLabels } from "@/lib/database";
-import type { TaskWithRelations, Label } from "@/types/database";
+import { TaskDetailView } from "@/components/tasks/TaskDetailView";
+import { SectionHeader } from "@/components/ui/SectionHeader";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { FilterBar } from "@/components/ui/FilterBar";
+import { FilterChips } from "@/components/ui/FilterChips";
+import { ToggleSwitch } from "@/components/ui/ToggleSwitch";
+import { getTasks, getLabels, getProfiles, getTaskAssignees } from "@/lib/database";
+import type { TaskWithRelations, Label, Profile } from "@/types/database";
 import { CalendarDays, Check } from "lucide-react";
-import { TaskFilters, TaskFilterState, filterTasks } from "@/components/filters/TaskFilters";
-import { cn } from "@/lib/utils";
+import { filterTasks } from "@/components/filters/TaskFilters";
+
+// Filter options
+const priorityOptions = [
+  { value: "p1", label: "P1", dotColor: "bg-error" },
+  { value: "p2", label: "P2", dotColor: "bg-warning" },
+  { value: "p3", label: "P3", dotColor: "bg-info" },
+  { value: "p4", label: "P4", dotColor: "bg-text-muted" },
+];
+
+const statusOptions = [
+  { value: "todo", label: "Offen" },
+  { value: "in_progress", label: "In Arbeit" },
+];
 
 interface GroupedTasks {
   date: string;
@@ -25,11 +42,14 @@ export default function UpcomingPage() {
   const [loading, setLoading] = useState(true);
   const [selectedTask, setSelectedTask] = useState<TaskWithRelations | null>(null);
   const [labels, setLabels] = useState<Label[]>([]);
-  const [filters, setFilters] = useState<TaskFilterState>({
-    priorities: [],
-    labels: [],
-    status: [],
-  });
+  const [profiles, setProfiles] = useState<Profile[]>([]);
+  const [taskAssigneeMap, setTaskAssigneeMap] = useState<Record<string, string[]>>({});
+
+  // Filter state
+  const [selectedPriorities, setSelectedPriorities] = useState<string[]>([]);
+  const [selectedLabels, setSelectedLabels] = useState<string[]>([]);
+  const [selectedStatus, setSelectedStatus] = useState<string[]>([]);
+  const [selectedAssignees, setSelectedAssignees] = useState<string[]>([]);
   const [showCompleted, setShowCompleted] = useState(false);
 
   const groupTasksByDate = (tasks: TaskWithRelations[]): GroupedTasks[] => {
@@ -49,7 +69,7 @@ export default function UpcomingPage() {
 
     return Object.entries(groups)
       .sort(([a], [b]) => a.localeCompare(b))
-      .map(([date, tasks]) => {
+      .map(([date, dateTasks]) => {
         const taskDate = new Date(date);
         const tomorrow = new Date(today);
         tomorrow.setDate(tomorrow.getDate() + 1);
@@ -67,17 +87,28 @@ export default function UpcomingPage() {
           });
         }
 
-        return { date, label, tasks };
+        return { date, label, tasks: dateTasks };
       });
   };
 
-  const loadTasks = async () => {
-    setLoading(true);
+  const loadTasks = async (silent = false) => {
+    if (!silent) setLoading(true);
 
-    const [tasksData, labelsData] = await Promise.all([
+    const [tasksData, labelsData, profilesData] = await Promise.all([
       getTasks(),
       getLabels(),
+      getProfiles(),
     ]);
+
+    // Load assignees for all tasks
+    const assigneeMap: Record<string, string[]> = {};
+    await Promise.all(
+      tasksData.map(async (task) => {
+        const assignees = await getTaskAssignees(task.id);
+        assigneeMap[task.id] = assignees.map((a) => a.user_id);
+      })
+    );
+    setTaskAssigneeMap(assigneeMap);
 
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -92,12 +123,12 @@ export default function UpcomingPage() {
         }
         return;
       }
-      
+
       if (!task.due_date) return;
-      
+
       const taskDate = new Date(task.due_date);
       taskDate.setHours(0, 0, 0, 0);
-      
+
       if (taskDate >= today) {
         upcoming.push(task);
       }
@@ -111,18 +142,90 @@ export default function UpcomingPage() {
     setCompletedTasks(completed);
     setGroupedTasks(groupTasksByDate(upcoming));
     setLabels(labelsData);
-    setLoading(false);
+    setProfiles(profilesData);
+    if (!silent) setLoading(false);
   };
 
   useEffect(() => {
     loadTasks();
   }, []);
 
+  // Listen for assignee changes and update the map
+  useEffect(() => {
+    const handleAssigneesChanged = async (event: Event) => {
+      const taskId = (event as CustomEvent<string>).detail;
+      const assignees = await getTaskAssignees(taskId);
+      setTaskAssigneeMap((prev) => ({
+        ...prev,
+        [taskId]: assignees.map((a) => a.user_id),
+      }));
+    };
+
+    window.addEventListener("assigneesChanged", handleAssigneesChanged);
+    return () => {
+      window.removeEventListener("assigneesChanged", handleAssigneesChanged);
+    };
+  }, []);
+
+  // Listen for label changes and reload tasks (silent)
+  useEffect(() => {
+    const handleLabelsChanged = () => {
+      loadTasks(true);
+    };
+
+    window.addEventListener("taskLabelsChanged", handleLabelsChanged);
+    return () => {
+      window.removeEventListener("taskLabelsChanged", handleLabelsChanged);
+    };
+  }, []);
+
+  // Listen for date changes and reload tasks (silent, to re-sort into correct groups)
+  useEffect(() => {
+    const handleDateChanged = () => {
+      loadTasks(true);
+    };
+
+    window.addEventListener("taskDateChanged", handleDateChanged);
+    return () => {
+      window.removeEventListener("taskDateChanged", handleDateChanged);
+    };
+  }, []);
+
+  // Listen for project changes and reload tasks (silent)
+  useEffect(() => {
+    const handleProjectChanged = () => {
+      loadTasks(true);
+    };
+
+    window.addEventListener("taskProjectChanged", handleProjectChanged);
+    return () => {
+      window.removeEventListener("taskProjectChanged", handleProjectChanged);
+    };
+  }, []);
+
+  // Listen for general task updates
+  useEffect(() => {
+    const handleTaskUpdated = () => {
+      loadTasks(true);
+    };
+
+    window.addEventListener("taskUpdated", handleTaskUpdated);
+    return () => {
+      window.removeEventListener("taskUpdated", handleTaskUpdated);
+    };
+  }, []);
+
   // Re-group when filters change
   useEffect(() => {
-    const filtered = filterTasks(allTasks, filters);
+    const filters = {
+      priorities: selectedPriorities,
+      labels: selectedLabels,
+      status: selectedStatus,
+      assignees: selectedAssignees,
+    };
+    const filtered = filterTasks(allTasks, filters, taskAssigneeMap);
     setGroupedTasks(groupTasksByDate(filtered));
-  }, [filters, allTasks]);
+  }, [selectedPriorities, selectedLabels, selectedStatus, selectedAssignees, allTasks, taskAssigneeMap]);
 
   const handleTaskUpdate = (updatedTask: TaskWithRelations) => {
     if (updatedTask.status === "done") {
@@ -155,64 +258,151 @@ export default function UpcomingPage() {
     setSelectedTask(null);
   };
 
-  const handleTaskCreated = () => {
-    loadTasks();
+  const handleTaskCreated = (task: TaskWithRelations) => {
+    loadTasks(true);
+    setSelectedTask(task);
   };
 
-  const filteredCompleted = filterTasks(completedTasks, filters);
+  const handleTaskClick = (task: TaskWithRelations) => {
+    // Toggle selection: clicking the same task again deselects it
+    if (selectedTask?.id === task.id) {
+      setSelectedTask(null);
+    } else {
+      setSelectedTask(task);
+    }
+  };
+
+  const handleCloseDetail = () => {
+    setSelectedTask(null);
+  };
+
+  const handleResetFilters = () => {
+    setSelectedPriorities([]);
+    setSelectedLabels([]);
+    setSelectedStatus([]);
+    setSelectedAssignees([]);
+    setShowCompleted(false);
+  };
+
+  // Build filters object for filterTasks function
+  const filters = {
+    priorities: selectedPriorities,
+    labels: selectedLabels,
+    status: selectedStatus,
+    assignees: selectedAssignees,
+  };
+
+  const hasActiveFilters = selectedPriorities.length > 0 || selectedLabels.length > 0 ||
+                           selectedStatus.length > 0 || selectedAssignees.length > 0;
+
+  const filteredCompleted = filterTasks(completedTasks, filters, taskAssigneeMap);
+
+  // Get unique label IDs from upcoming tasks
+  const activeLabelIds = new Set(
+    allTasks.flatMap((task) => task.labels?.map((l) => l.id) || [])
+  );
+
+  // Convert labels to filter options (only labels used in upcoming tasks)
+  const labelOptions = labels
+    .filter((label) => activeLabelIds.has(label.id))
+    .map((label) => ({
+      value: label.id,
+      label: label.name,
+      color: label.color,
+    }));
+
+  // Get unique assignee IDs from upcoming tasks
+  const activeAssigneeIds = new Set(
+    allTasks.flatMap((task) => taskAssigneeMap[task.id] || [])
+  );
+
+  // Convert profiles to filter options (only users with upcoming tasks)
+  const assigneeOptions = profiles
+    .filter((profile) => activeAssigneeIds.has(profile.id))
+    .map((profile) => ({
+      value: profile.id,
+      label: profile.full_name || profile.email,
+    }));
+
+  // Get today's date string for variant comparison
+  const todayString = new Date().toISOString().split("T")[0];
 
   return (
-    <div className="min-h-screen bg-background">
-      <Sidebar />
+    <AppLayout>
+      <Header title="Anstehend" subtitle="Kommende Aufgaben" />
 
-      <main className="ml-sidebar-width">
-        <Header title="Anstehend" subtitle="Kommende Aufgaben" />
+      {!loading && (
+        <FilterBar
+          onReset={handleResetFilters}
+          showReset={hasActiveFilters || showCompleted}
+        >
+          <FilterChips
+            label="Priorität"
+            options={priorityOptions}
+            selected={selectedPriorities}
+            onChange={setSelectedPriorities}
+          />
+          <FilterChips
+            label="Status"
+            options={statusOptions}
+            selected={selectedStatus}
+            onChange={setSelectedStatus}
+          />
+          {assigneeOptions.length > 0 && (
+            <FilterChips
+              label="Zugewiesen"
+              options={assigneeOptions}
+              selected={selectedAssignees}
+              onChange={setSelectedAssignees}
+            />
+          )}
+          {labelOptions.length > 0 && (
+            <FilterChips
+              label="Labels"
+              options={labelOptions}
+              selected={selectedLabels}
+              onChange={setSelectedLabels}
+            />
+          )}
+          {completedTasks.length > 0 && (
+            <ToggleSwitch
+              label={`Erledigte anzeigen (${completedTasks.length})`}
+              checked={showCompleted}
+              onChange={setShowCompleted}
+            />
+          )}
+        </FilterBar>
+      )}
 
-        <div className="p-6">
+      <div className="pt-6 flex gap-6">
+        {/* Left Column: Task Lists */}
+        <div className="flex-1 min-w-0">
           {loading ? (
             <div className="flex items-center justify-center py-12">
               <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
             </div>
           ) : (
             <>
-              {/* Filters */}
-              <div className="flex justify-end gap-2 mb-4">
-                <TaskFilters
-                  filters={filters}
-                  onFiltersChange={setFilters}
-                  availableLabels={labels}
-                />
-                {completedTasks.length > 0 && (
-                  <button
-                    onClick={() => setShowCompleted(!showCompleted)}
-                    className={cn(
-                      "flex items-center gap-2 px-3 py-1.5 text-sm rounded-lg transition-colors",
-                      showCompleted
-                        ? "bg-primary-surface text-primary"
-                        : "text-text-muted hover:text-text-primary hover:bg-divider"
-                    )}
-                  >
-                    <Check className="w-4 h-4" />
-                    Erledigte ({completedTasks.length})
-                  </button>
-                )}
-              </div>
-
               {groupedTasks.length > 0 ? (
                 <>
                   {groupedTasks.map((group) => (
                     <section key={group.date} className="mb-6">
-                      <h2 className="text-sm font-semibold text-text-secondary mb-3 flex items-center gap-2">
-                        <span className="w-2 h-2 rounded-full bg-primary" />
-                        {group.label} ({group.tasks.length})
-                      </h2>
-                      <div className="bg-surface rounded-xl shadow-sm border border-border">
+                      <SectionHeader
+                        title={group.label}
+                        count={group.tasks.length}
+                        variant={group.date === todayString ? "default" : "info"}
+                      />
+                      <div className="flex flex-col gap-2">
                         {group.tasks.map((task) => (
                           <SortableTaskItem
                             key={task.id}
                             task={task}
                             onUpdate={handleTaskUpdate}
-                            onClick={setSelectedTask}
+                            onClick={handleTaskClick}
+                            onDelete={handleTaskDelete}
+                            showProject
+                            hideDragHandle
+                            isSelected={selectedTask?.id === task.id}
                           />
                         ))}
                       </div>
@@ -220,54 +410,57 @@ export default function UpcomingPage() {
                   ))}
                 </>
               ) : (
-                <div className="bg-surface rounded-xl shadow-sm border border-border p-12 text-center mb-6">
-                  <CalendarDays className="w-12 h-12 text-text-muted mx-auto mb-4" />
-                  <p className="text-text-muted mb-2">
-                    {filters.priorities.length > 0 || filters.labels.length > 0
-                      ? "Keine Aufgaben mit diesen Filtern"
-                      : "Keine anstehenden Aufgaben"}
-                  </p>
-                  <p className="text-sm text-text-muted">
-                    {filters.priorities.length > 0 || filters.labels.length > 0
-                      ? "Passe die Filter an"
-                      : "Aufgaben mit Fälligkeitsdatum erscheinen hier"}
-                  </p>
-                </div>
+                <EmptyState
+                  icon={CalendarDays}
+                  title={hasActiveFilters ? "Keine Aufgaben mit diesen Filtern" : "Keine anstehenden Aufgaben"}
+                  description={hasActiveFilters ? "Passe die Filter an" : "Aufgaben mit Fälligkeitsdatum erscheinen hier"}
+                />
               )}
 
               {/* Erledigte Section */}
               {showCompleted && filteredCompleted.length > 0 && (
                 <section className="mb-6">
-                  <h2 className="text-sm font-semibold text-text-muted mb-3 flex items-center gap-2">
-                    <Check className="w-4 h-4" />
-                    Erledigt ({filteredCompleted.length})
-                  </h2>
-                  <div className="bg-surface rounded-xl shadow-sm border border-border opacity-60">
+                  <SectionHeader
+                    title="Erledigt"
+                    count={filteredCompleted.length}
+                    icon={Check}
+                    variant="muted"
+                  />
+                  <div className="flex flex-col gap-2">
                     {filteredCompleted.map((task) => (
                       <SortableTaskItem
                         key={task.id}
                         task={task}
                         onUpdate={handleTaskUpdate}
-                        onClick={setSelectedTask}
+                        onClick={handleTaskClick}
+                        onDelete={handleTaskDelete}
+                        showProject
+                        hideDragHandle
+                        isSelected={selectedTask?.id === task.id}
                       />
                     ))}
                   </div>
                 </section>
               )}
 
+              {/* Quick Add */}
               <QuickAddTask onTaskCreated={handleTaskCreated} />
             </>
           )}
         </div>
-      </main>
 
-      <TaskDetailPanel
-        task={selectedTask}
-        isOpen={!!selectedTask}
-        onClose={() => setSelectedTask(null)}
-        onUpdate={handleTaskUpdate}
-        onDelete={handleTaskDelete}
-      />
-    </div>
+        {/* Right Column: Task Detail View - only show when task is selected */}
+        {selectedTask && (
+          <div className="w-[500px] shrink min-w-[320px] sticky top-6 self-start max-h-[calc(100vh-120px)]">
+            <TaskDetailView
+              task={selectedTask}
+              onUpdate={handleTaskUpdate}
+              onDelete={handleTaskDelete}
+              onClose={handleCloseDetail}
+            />
+          </div>
+        )}
+      </div>
+    </AppLayout>
   );
 }
