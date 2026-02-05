@@ -191,9 +191,7 @@ function parseViewTask(viewTask: Record<string, unknown>): TaskWithRelations {
 }
 
 export async function getTasks(options?: { excludeCompleted?: boolean }): Promise<TaskWithRelations[]> {
-  console.time("getTasks: getCurrentUser (cached)");
   const user = await getCurrentUser();
-  console.timeEnd("getTasks: getCurrentUser (cached)");
   if (!user) return [];
 
   // Use view for single-query loading of all relations
@@ -206,9 +204,7 @@ export async function getTasks(options?: { excludeCompleted?: boolean }): Promis
     query = query.neq("status", "done");
   }
 
-  console.time("getTasks: supabase query");
   const { data, error } = await query.order("position", { ascending: true });
-  console.timeEnd("getTasks: supabase query");
 
   if (error) {
     console.error("Error fetching tasks from view:", error);
@@ -596,19 +592,15 @@ export async function getSubtaskCount(taskIds: string[]): Promise<Record<string,
 // ============================================
 
 export async function getLabels(): Promise<Label[]> {
-  console.time("getLabels: getCurrentUser (cached)");
   const user = await getCurrentUser();
-  console.timeEnd("getLabels: getCurrentUser (cached)");
   if (!user) return [];
 
   // Labels are personal - keep created_by filter
-  console.time("getLabels: supabase query");
   const { data, error } = await supabase
     .from("labels")
     .select("*")
     .eq("created_by", user.id)
     .order("name", { ascending: true });
-  console.timeEnd("getLabels: supabase query");
 
   if (error) {
     console.error("Error fetching labels:", error);
@@ -969,12 +961,10 @@ export async function getAllProjectsProgress(): Promise<Record<string, { total: 
 // ============================================
 
 export async function getProfiles(): Promise<Profile[]> {
-  console.time("getProfiles: supabase query");
   const { data, error } = await supabase
     .from("profiles")
     .select("*")
     .order("full_name");
-  console.timeEnd("getProfiles: supabase query");
 
   if (error) {
     console.error("Error fetching profiles:", error);

@@ -51,17 +51,12 @@ export default function Home() {
   const loadTasks = async (silent = false) => {
     if (!silent) setLoading(true);
 
-    console.time("loadTasks total");
-
     // Lazy loading: exclude completed tasks on initial load
-    console.time("getTasks + getLabels + getProfiles");
     const [allTasks, labelsData, profilesData] = await Promise.all([
       getTasks({ excludeCompleted: true }),
       getLabels(),
       getProfiles(),
     ]);
-    console.timeEnd("getTasks + getLabels + getProfiles");
-    console.log("Tasks loaded:", allTasks.length);
 
     // Build assignee map from task.assignees (now batch-loaded in getTasks)
     const assigneeMap: Record<string, string[]> = {};
@@ -115,7 +110,6 @@ export default function Home() {
     setTodayTasks(sortTasks(todayList));
     setLabels(labelsData);
     setProfiles(profilesData);
-    console.timeEnd("loadTasks total");
     if (!silent) setLoading(false);
   };
 
