@@ -1,6 +1,6 @@
 -- View: tasks_with_relations
 -- Kombiniert Tasks mit allen Relationen in einer einzigen Abfrage
--- Performance-Optimierung: Ersetzt 4-5 separate Queries
+-- Performance-Optimierung: Verwendet LEFT JOINs statt korrelierter Subqueries
 
 DROP VIEW IF EXISTS tasks_with_relations;
 
@@ -20,77 +20,86 @@ SELECT
   t.created_at,
   t.updated_at,
 
-  -- Projekte als JSON-Array
-  COALESCE(
-    (SELECT json_agg(
-      json_build_object(
-        'id', p.id,
-        'name', p.name,
-        'color', p.color,
-        'description', p.description,
-        'position', p.position,
-        'created_by', p.created_by,
-        'created_at', p.created_at,
-        'updated_at', p.updated_at,
-        'archived_at', p.archived_at
-      )
-    )
-    FROM task_projects tp
-    JOIN projects p ON p.id = tp.project_id
-    WHERE tp.task_id = t.id
-    ), '[]'::json
-  ) as projects,
+  -- Projekte als JSON-Array (pre-aggregiert)
+  COALESCE(proj_agg.projects, '[]'::json) as projects,
 
-  -- Labels als JSON-Array
-  COALESCE(
-    (SELECT json_agg(
-      json_build_object(
-        'id', l.id,
-        'name', l.name,
-        'color', l.color,
-        'created_by', l.created_by,
-        'created_at', l.created_at
-      )
-    )
-    FROM task_labels tl
-    JOIN labels l ON l.id = tl.label_id
-    WHERE tl.task_id = t.id
-    ), '[]'::json
-  ) as labels,
+  -- Labels als JSON-Array (pre-aggregiert)
+  COALESCE(label_agg.labels, '[]'::json) as labels,
 
-  -- Assignees als JSON-Array
-  COALESCE(
-    (SELECT json_agg(
-      json_build_object(
-        'user_id', ta.user_id,
-        'task_id', ta.task_id,
-        'profile', json_build_object(
-          'id', pr.id,
-          'email', pr.email,
-          'full_name', pr.full_name,
-          'avatar_url', pr.avatar_url
-        )
-      )
-    )
-    FROM task_assignees ta
-    JOIN profiles pr ON pr.id = ta.user_id
-    WHERE ta.task_id = t.id
-    ), '[]'::json
-  ) as assignees,
+  -- Assignees als JSON-Array (pre-aggregiert)
+  COALESCE(assignee_agg.assignees, '[]'::json) as assignees,
 
-  -- Subtask counts als JSON-Objekt
+  -- Subtask counts als JSON-Objekt (pre-aggregiert)
   json_build_object(
-    'total', (SELECT COUNT(*) FROM tasks st WHERE st.parent_task_id = t.id AND st.status != 'archived'),
-    'completed', (SELECT COUNT(*) FROM tasks st WHERE st.parent_task_id = t.id AND st.status = 'done')
+    'total', COALESCE(subtask_agg.total, 0),
+    'completed', COALESCE(subtask_agg.completed, 0)
   ) as subtask_count
 
 FROM tasks t
+
+-- LEFT JOIN für Projekte (pre-aggregiert pro Task)
+LEFT JOIN LATERAL (
+  SELECT json_agg(
+    json_build_object(
+      'id', p.id,
+      'name', p.name,
+      'color', p.color,
+      'description', p.description,
+      'position', p.position,
+      'created_by', p.created_by,
+      'created_at', p.created_at,
+      'updated_at', p.updated_at,
+      'archived_at', p.archived_at
+    )
+  ) as projects
+  FROM task_projects tp
+  JOIN projects p ON p.id = tp.project_id
+  WHERE tp.task_id = t.id
+) proj_agg ON true
+
+-- LEFT JOIN für Labels (pre-aggregiert pro Task)
+LEFT JOIN LATERAL (
+  SELECT json_agg(
+    json_build_object(
+      'id', l.id,
+      'name', l.name,
+      'color', l.color,
+      'created_by', l.created_by,
+      'created_at', l.created_at
+    )
+  ) as labels
+  FROM task_labels tl
+  JOIN labels l ON l.id = tl.label_id
+  WHERE tl.task_id = t.id
+) label_agg ON true
+
+-- LEFT JOIN für Assignees (pre-aggregiert pro Task)
+LEFT JOIN LATERAL (
+  SELECT json_agg(
+    json_build_object(
+      'user_id', ta.user_id,
+      'task_id', ta.task_id,
+      'profile', json_build_object(
+        'id', pr.id,
+        'email', pr.email,
+        'full_name', pr.full_name,
+        'avatar_url', pr.avatar_url
+      )
+    )
+  ) as assignees
+  FROM task_assignees ta
+  JOIN profiles pr ON pr.id = ta.user_id
+  WHERE ta.task_id = t.id
+) assignee_agg ON true
+
+-- LEFT JOIN für Subtask counts (pre-aggregiert pro Task)
+LEFT JOIN LATERAL (
+  SELECT
+    COUNT(*) FILTER (WHERE st.status != 'archived') as total,
+    COUNT(*) FILTER (WHERE st.status = 'done') as completed
+  FROM tasks st
+  WHERE st.parent_task_id = t.id
+) subtask_agg ON true
+
 WHERE t.parent_task_id IS NULL
   AND t.status != 'archived';
-
--- RLS für die View aktivieren
--- Views erben RLS von den zugrunde liegenden Tabellen automatisch,
--- aber wir erstellen eine explizite Policy für bessere Kontrolle
-
--- Hinweis: Falls RLS auf der View nicht funktioniert, kann man stattdessen
--- eine Funktion mit SECURITY DEFINER verwenden
