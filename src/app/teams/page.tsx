@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Sidebar } from "@/components/layout/Sidebar";
+import { AppLayout } from "@/components/layout/AppLayout";
 import { Header } from "@/components/layout/Header";
 import { getTeams, getTeam, createTeam, deleteTeam, getProfiles, addTeamMember, removeTeamMember, updateTeamMemberRole } from "@/lib/database";
 import type { Team, TeamWithMembers, Profile, TeamRole } from "@/types/database";
@@ -126,13 +126,10 @@ export default function TeamsPage() {
   );
 
   return (
-    <div className="min-h-screen bg-background">
-      <Sidebar />
+    <AppLayout>
+      <Header title="Teams" subtitle="Teams verwalten und Berechtigungen steuern" />
 
-      <main className="ml-sidebar-width">
-        <Header title="Teams" subtitle="Teams verwalten und Berechtigungen steuern" />
-
-        <div className="p-6">
+      <div className="pt-6">
           {loading ? (
             <div className="flex items-center justify-center py-12">
               <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
@@ -323,7 +320,6 @@ export default function TeamsPage() {
             </div>
           )}
         </div>
-      </main>
 
       {/* Create Team Modal */}
       {showCreateModal && (
@@ -458,6 +454,6 @@ export default function TeamsPage() {
           </div>
         </div>
       )}
-    </div>
+    </AppLayout>
   );
 }

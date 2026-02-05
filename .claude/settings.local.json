@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git add:*)",
+      "Bash(git push:*)",
+      "Bash(npm run build:*)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nFeature: TaskDetailView mit Tab-Navigation und UI-Komponenten Refactoring\n\n- Neue TaskDetailView Komponente mit Tab-Navigation \\(Aufgabe, Unteraufgaben, Kommentare\\)\n- Zentrale UI-Komponenten: Input, TextArea, FormField, PrioritySelector, StatusSelector\n- Konsistente Schriftgrößen mit Inline-Styles \\(0.875rem für Formfelder, 1.375rem für Titel\\)\n- Status als Button-Stil \\(wie Priorität\\) statt Dropdown\n- AssigneeSelector mit vollständigen Namen und Label\n- Auto-Resize für Beschreibungsfeld\n- RecurrenceSelector mit voller Breite und gleicher Höhe wie Input\n- Zwei-Spalten-Layout: Tasks links, Details rechts \\(600px\\)\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nFeature: SortableTaskItem Metadaten-Refactoring und Dokumentation\n\n- Task-Titel mit text-h4 font-medium Styling\n- Zugewiesen und Labels als Text-Badges mit einheitlichem Padding \\(px-2.5 py-1\\)\n- Löschen-Button in Metadatenzeile verschoben \\(rechtsbündig\\)\n- Abstände: 16px zwischen Gruppen, 4px innerhalb von Gruppen\n- Rechte Spalte responsiv: max 500px, min 320px, shrinkable\n- Dokumentation für Heute-Seite erstellt \\(docs/heute-page.md\\)\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(npx tsc:*)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nFeature: My-Tasks Seite Refactoring mit Gruppierungsoptionen\n\n- Komplettes Refactoring auf AppLayout + TaskDetailView Layout\n- FilterBar mit Priorität, Status, Labels-Filtern\n- Gruppierungsoptionen: Priorität, Datum, Projekt \\(Segmented Control\\)\n- Auto-Assign des aktuellen Benutzers bei Aufgabenerstellung\n- Event-System für Live-Updates \\(assigneesChanged, taskLabelsChanged\\)\n- Toggle-Verhalten bei Task-Auswahl\n- Alphabetische Sortierung der Projektgruppen\n- SectionHeader erweitert um warning und info Varianten\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(git commit:*)",
+      "Bash(comm:*)",
+      "Bash(for func in addLabelToTask createLabel deleteLabel getProject getProjectProgress getSubtaskCount getTaskLabels getTasksByProject getUserTeams removeLabelFromTask searchTasks updateTeam)",
+      "Bash(do echo \"=== $func ===\")",
+      "Bash(done)",
+      "Bash(wc:*)",
+      "Bash(grep:*)"
+    ]
+  }
+}

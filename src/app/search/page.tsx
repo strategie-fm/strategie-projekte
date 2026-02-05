@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Sidebar } from "@/components/layout/Sidebar";
+import { useState, useEffect, useCallback } from "react";
+import { AppLayout } from "@/components/layout/AppLayout";
 import { Header } from "@/components/layout/Header";
 import { SortableTaskItem } from "@/components/tasks/SortableTaskItem";
-import { TaskDetailPanel } from "@/components/tasks/TaskDetailPanel";
+import { TaskDetailView } from "@/components/tasks/TaskDetailView";
 import { getTasks, getLabels, getProfiles, getTaskAssignees } from "@/lib/database";
 import type { TaskWithRelations, Label, Profile } from "@/types/database";
 import { Search as SearchIcon, X, Filter } from "lucide-react";
@@ -39,33 +39,57 @@ export default function SearchPage() {
     status: ["todo", "in_progress"],
   });
 
-  // Load all tasks, labels, and profiles on mount
-  useEffect(() => {
-    const loadData = async () => {
-      setLoading(true);
-      const [tasksData, labelsData, profilesData] = await Promise.all([
-        getTasks(),
-        getLabels(),
-        getProfiles(),
-      ]);
-      setAllTasks(tasksData);
-      setLabels(labelsData);
-      setProfiles(profilesData);
+  // Load all tasks, labels, and profiles
+  const loadData = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
+    const [tasksData, labelsData, profilesData] = await Promise.all([
+      getTasks(),
+      getLabels(),
+      getProfiles(),
+    ]);
+    setAllTasks(tasksData);
+    setLabels(labelsData);
+    setProfiles(profilesData);
 
-      // Load assignees for all tasks
-      const assigneeMap: Record<string, string[]> = {};
-      await Promise.all(
-        tasksData.map(async (task) => {
-          const assignees = await getTaskAssignees(task.id);
-          assigneeMap[task.id] = assignees.map((a) => a.user_id);
-        })
-      );
-      setTaskAssigneeMap(assigneeMap);
+    // Build assignee map from batch-loaded data
+    const assigneeMap: Record<string, string[]> = {};
+    tasksData.forEach((task) => {
+      assigneeMap[task.id] = (task.assignees || []).map((a) => a.user_id);
+    });
+    setTaskAssigneeMap(assigneeMap);
 
-      setLoading(false);
-    };
-    loadData();
+    if (!silent) setLoading(false);
   }, []);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+  // Event listeners for live updates
+  useEffect(() => {
+    const handleAssigneesChanged = async (event: Event) => {
+      const taskId = (event as CustomEvent<string>).detail;
+      const assignees = await getTaskAssignees(taskId);
+      setTaskAssigneeMap((prev) => ({
+        ...prev,
+        [taskId]: assignees.map((a) => a.user_id),
+      }));
+    };
+    window.addEventListener("assigneesChanged", handleAssigneesChanged);
+    return () => window.removeEventListener("assigneesChanged", handleAssigneesChanged);
+  }, []);
+
+  useEffect(() => {
+    const handleTaskLabelsChanged = () => loadData(true);
+    window.addEventListener("taskLabelsChanged", handleTaskLabelsChanged);
+    return () => window.removeEventListener("taskLabelsChanged", handleTaskLabelsChanged);
+  }, [loadData]);
+
+  useEffect(() => {
+    const handleTaskUpdated = () => loadData(true);
+    window.addEventListener("taskUpdated", handleTaskUpdated);
+    return () => window.removeEventListener("taskUpdated", handleTaskUpdated);
+  }, [loadData]);
 
   const handleTaskUpdate = (updatedTask: TaskWithRelations) => {
     setAllTasks((prev) =>
@@ -78,6 +102,19 @@ export default function SearchPage() {
 
   const handleTaskDelete = (taskId: string) => {
     setAllTasks((prev) => prev.filter((t) => t.id !== taskId));
+    setSelectedTask(null);
+  };
+
+  // Toggle behavior for task click
+  const handleTaskClick = (task: TaskWithRelations) => {
+    if (selectedTask?.id === task.id) {
+      setSelectedTask(null);
+    } else {
+      setSelectedTask(task);
+    }
+  };
+
+  const handleCloseDetail = () => {
     setSelectedTask(null);
   };
 
@@ -159,13 +196,12 @@ export default function SearchPage() {
   const hasActiveSearch = query.trim().length > 0 || activeFilterCount > 0;
 
   return (
-    <div className="min-h-screen bg-background">
-      <Sidebar />
+    <AppLayout>
+      <Header title="Suche" subtitle="Aufgaben durchsuchen und filtern" />
 
-      <main className="ml-sidebar-width">
-        <Header title="Suche" subtitle="Aufgaben durchsuchen und filtern" />
-
-        <div className="p-6">
+      <div className="pt-6 flex gap-6">
+        {/* Left Column: Search and Results */}
+        <div className="flex-1 min-w-0">
           {/* Search and Filter Card */}
           <div className="bg-surface rounded-xl border border-border p-4 mb-6">
             {/* Search Input */}
@@ -373,14 +409,17 @@ export default function SearchPage() {
             </div>
           ) : hasActiveSearch ? (
             filteredResults.length > 0 ? (
-              <div className="bg-surface rounded-xl shadow-sm border border-border">
+              <div className="flex flex-col gap-2">
                 {filteredResults.map((task) => (
                   <SortableTaskItem
                     key={task.id}
                     task={task}
                     onUpdate={handleTaskUpdate}
-                    onClick={setSelectedTask}
+                    onClick={handleTaskClick}
+                    onDelete={handleTaskDelete}
                     showProject={true}
+                    hideDragHandle
+                    isSelected={selectedTask?.id === task.id}
                   />
                 ))}
               </div>
@@ -403,16 +442,19 @@ export default function SearchPage() {
             </div>
           )}
         </div>
-      </main>
 
-      {/* Task Detail Panel */}
-      <TaskDetailPanel
-        task={selectedTask}
-        isOpen={!!selectedTask}
-        onClose={() => setSelectedTask(null)}
-        onUpdate={handleTaskUpdate}
-        onDelete={handleTaskDelete}
-      />
-    </div>
+        {/* Right Column: Task Detail View - only show when task is selected */}
+        {selectedTask && (
+          <div className="w-[500px] shrink min-w-[320px] sticky top-6 self-start max-h-[calc(100vh-120px)]">
+            <TaskDetailView
+              task={selectedTask}
+              onUpdate={handleTaskUpdate}
+              onDelete={handleTaskDelete}
+              onClose={handleCloseDetail}
+            />
+          </div>
+        )}
+      </div>
+    </AppLayout>
   );
 }
