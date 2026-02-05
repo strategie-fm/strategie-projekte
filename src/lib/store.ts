@@ -40,8 +40,9 @@ export const useSidebarStore = create<SidebarState>((set, get) => ({
     set({ isLoading: true });
 
     try {
-      // Load user profile
-      const { data: { user } } = await supabase.auth.getUser();
+      // Load user profile (use cached session for performance)
+      const { data: { session } } = await supabase.auth.getSession();
+      const user = session?.user;
       let profile: Profile | null = null;
       if (user) {
         profile = await getProfile(user.id);
@@ -80,9 +81,9 @@ export const useSidebarStore = create<SidebarState>((set, get) => ({
 
   // Refresh user profile
   refreshUserProfile: async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user) {
-      const profile = await getProfile(user.id);
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session?.user) {
+      const profile = await getProfile(session.user.id);
       set({ userProfile: profile });
     }
   },

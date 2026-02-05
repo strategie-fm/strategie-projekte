@@ -61,8 +61,9 @@ export default function MyTasksPage() {
   const loadData = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
 
-    // Get current user
-    const { data: { user } } = await supabase.auth.getUser();
+    // Get current user (use cached session for performance)
+    const { data: { session } } = await supabase.auth.getSession();
+    const user = session?.user;
 
     if (!user) {
       setLoading(false);

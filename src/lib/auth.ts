@@ -1,8 +1,9 @@
 import { supabase } from "./supabase";
 
 export async function getUser() {
-  const { data: { user } } = await supabase.auth.getUser();
-  return user;
+  // Use cached session for performance (avoids network request to Auth server)
+  const { data: { session } } = await supabase.auth.getSession();
+  return session?.user ?? null;
 }
 
 export async function getSession() {
