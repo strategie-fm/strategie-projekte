@@ -126,7 +126,7 @@ export function QuickAddTask({ projectId, onTaskCreated }: QuickAddTaskProps) {
         autoFocus
       />
 
-      {/* Row 1: Datum / Projekt */}
+      {/* Row 1: Datum / Status / Priorität */}
       <FormRow className="mb-4">
         <FormField label="Datum" icon={Calendar} className="flex-1">
           <Input
@@ -136,8 +136,22 @@ export function QuickAddTask({ projectId, onTaskCreated }: QuickAddTaskProps) {
             className="w-full"
           />
         </FormField>
+        <FormField label="Status" icon={PlayCircle} className="flex-1">
+          <StatusSelector
+            value={status}
+            onChange={(value) => {
+              if (value !== "done") setStatus(value);
+            }}
+          />
+        </FormField>
+        <FormField label="Priorität" icon={Flag} className="flex-1">
+          <PrioritySelector value={priority} onChange={setPriority} />
+        </FormField>
+      </FormRow>
 
-        {!projectId && (
+      {/* Row 2: Projekt (nur wenn nicht auf Projektseite) */}
+      {!projectId && (
+        <FormRow className="mb-4">
           <FormField label="Projekt" icon={Folder} className="flex-1">
             <div className="relative">
               <button
@@ -214,23 +228,8 @@ export function QuickAddTask({ projectId, onTaskCreated }: QuickAddTaskProps) {
               )}
             </div>
           </FormField>
-        )}
-      </FormRow>
-
-      {/* Row 2: Status / Priorität */}
-      <FormRow className="mb-4">
-        <FormField label="Status" icon={PlayCircle} className="flex-1">
-          <StatusSelector
-            value={status}
-            onChange={(value) => {
-              if (value !== "done") setStatus(value);
-            }}
-          />
-        </FormField>
-        <FormField label="Priorität" icon={Flag} className="flex-1">
-          <PrioritySelector value={priority} onChange={setPriority} />
-        </FormField>
-      </FormRow>
+        </FormRow>
+      )}
 
       {/* Actions */}
       <div className="flex items-center justify-between pt-2 border-t border-border">

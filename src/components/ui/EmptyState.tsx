@@ -21,7 +21,7 @@ export function EmptyState({
   children,
 }: EmptyStateProps) {
   return (
-    <Card className={cn("p-12 text-center", className)}>
+    <Card className={cn("p-12 text-center mb-6", className)}>
       {Icon && (
         <Icon className="w-12 h-12 text-text-muted mx-auto mb-4" />
       )}
