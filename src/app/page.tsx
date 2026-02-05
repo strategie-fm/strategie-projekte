@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Header } from "@/components/layout/Header";
 import { SortableTaskList } from "@/components/tasks/SortableTaskList";
@@ -12,7 +12,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { FilterBar } from "@/components/ui/FilterBar";
 import { FilterChips } from "@/components/ui/FilterChips";
 import { ToggleSwitch } from "@/components/ui/ToggleSwitch";
-import { getTasks, getLabels, getProfiles, getTaskAssignees } from "@/lib/database";
+import { getTasks, getLabels, getProfiles, getTaskAssignees, getCompletedTasks } from "@/lib/database";
 import type { TaskWithRelations, Label, Profile } from "@/types/database";
 import { Calendar, Check } from "lucide-react";
 import { filterTasks } from "@/components/filters/TaskFilters";
@@ -34,6 +34,7 @@ export default function Home() {
   const [overdueTasks, setOverdueTasks] = useState<TaskWithRelations[]>([]);
   const [todayTasks, setTodayTasks] = useState<TaskWithRelations[]>([]);
   const [completedTasks, setCompletedTasks] = useState<TaskWithRelations[]>([]);
+  const [completedTasksLoaded, setCompletedTasksLoaded] = useState(false);
   const [loading, setLoading] = useState(true);
   const [selectedTask, setSelectedTask] = useState<TaskWithRelations | null>(null);
   const [labels, setLabels] = useState<Label[]>([]);
@@ -50,8 +51,9 @@ export default function Home() {
   const loadTasks = async (silent = false) => {
     if (!silent) setLoading(true);
 
+    // Lazy loading: exclude completed tasks on initial load
     const [allTasks, labelsData, profilesData] = await Promise.all([
-      getTasks(),
+      getTasks({ excludeCompleted: true }),
       getLabels(),
       getProfiles(),
     ]);
@@ -68,7 +70,6 @@ export default function Home() {
 
     const overdue: TaskWithRelations[] = [];
     const todayList: TaskWithRelations[] = [];
-    const completed: TaskWithRelations[] = [];
 
     allTasks.forEach((task) => {
       // Skip tasks without due date
@@ -81,11 +82,6 @@ export default function Home() {
 
       // Only show tasks with due_date <= today
       if (taskDate > today) {
-        return;
-      }
-
-      if (task.status === "done") {
-        completed.push(task);
         return;
       }
 
@@ -112,15 +108,51 @@ export default function Home() {
 
     setOverdueTasks(sortTasks(overdue));
     setTodayTasks(sortTasks(todayList));
-    setCompletedTasks(sortTasks(completed));
     setLabels(labelsData);
     setProfiles(profilesData);
     if (!silent) setLoading(false);
   };
 
+  // Lazy load completed tasks only when the toggle is activated
+  const loadCompletedTasksData = useCallback(async () => {
+    if (completedTasksLoaded) return;
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const todayStr = today.toISOString().split("T")[0];
+
+    const completed = await getCompletedTasks({ dueDateLte: todayStr });
+
+    // Add to assignee map
+    const newAssigneeMap: Record<string, string[]> = {};
+    completed.forEach((task) => {
+      newAssigneeMap[task.id] = (task.assignees || []).map((a) => a.user_id);
+    });
+    setTaskAssigneeMap((prev) => ({ ...prev, ...newAssigneeMap }));
+
+    // Sort and set completed tasks
+    const priorityOrder = { p1: 1, p2: 2, p3: 3, p4: 4 };
+    const sorted = [...completed].sort((a, b) => {
+      const dateA = a.due_date ? new Date(a.due_date).getTime() : 0;
+      const dateB = b.due_date ? new Date(b.due_date).getTime() : 0;
+      if (dateA !== dateB) return dateA - dateB;
+      return priorityOrder[a.priority] - priorityOrder[b.priority];
+    });
+
+    setCompletedTasks(sorted);
+    setCompletedTasksLoaded(true);
+  }, [completedTasksLoaded]);
+
   useEffect(() => {
     loadTasks();
   }, []);
+
+  // Lazy load completed tasks when toggle is activated
+  useEffect(() => {
+    if (showCompleted && !completedTasksLoaded) {
+      loadCompletedTasksData();
+    }
+  }, [showCompleted, completedTasksLoaded, loadCompletedTasksData]);
 
   // Listen for assignee changes and update the map
   useEffect(() => {
@@ -314,9 +346,10 @@ export default function Home() {
               onChange={setSelectedLabels}
             />
           )}
-          {completedTasks.length > 0 && (
+          {/* Show toggle if: not yet loaded, OR has completed tasks */}
+          {(!completedTasksLoaded || completedTasks.length > 0) && (
             <ToggleSwitch
-              label={`Erledigte anzeigen (${completedTasks.length})`}
+              label={completedTasksLoaded ? `Erledigte anzeigen (${completedTasks.length})` : "Erledigte laden"}
               checked={showCompleted}
               onChange={setShowCompleted}
             />

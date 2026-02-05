@@ -159,17 +159,23 @@ export async function getArchivedProjects(): Promise<Project[]> {
 // TASKS
 // ============================================
 
-export async function getTasks(): Promise<TaskWithRelations[]> {
+export async function getTasks(options?: { excludeCompleted?: boolean }): Promise<TaskWithRelations[]> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return [];
 
   // RLS handles access control - no need to filter by created_by
-  const { data: tasks, error } = await supabase
+  let query = supabase
     .from("tasks")
     .select("*")
     .is("parent_task_id", null)
-    .neq("status", "archived")
-    .order("position", { ascending: true });
+    .neq("status", "archived");
+
+  // Optionally exclude completed tasks for faster initial load
+  if (options?.excludeCompleted) {
+    query = query.neq("status", "done");
+  }
+
+  const { data: tasks, error } = await query.order("position", { ascending: true });
 
   if (error) {
     console.error("Error fetching tasks:", error);
@@ -236,6 +242,108 @@ export async function getTasks(): Promise<TaskWithRelations[]> {
       assignees,
       labels,
       subtaskCount: subtaskCounts[task.id] || undefined,
+    };
+  });
+}
+
+// Lazy loading: Fetch only completed tasks (for "Show completed" toggle)
+export async function getCompletedTasks(options?: {
+  dueDateLte?: string;  // Only get completed tasks with due_date <= this date
+  projectId?: string;   // Filter by project
+}): Promise<TaskWithRelations[]> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return [];
+
+  let query = supabase
+    .from("tasks")
+    .select("*")
+    .is("parent_task_id", null)
+    .eq("status", "done");
+
+  if (options?.dueDateLte) {
+    query = query.lte("due_date", options.dueDateLte);
+  }
+
+  const { data: tasks, error } = await query.order("completed_at", { ascending: false });
+
+  if (error) {
+    console.error("Error fetching completed tasks:", error);
+    return [];
+  }
+
+  if (!tasks || tasks.length === 0) {
+    return [];
+  }
+
+  let taskIds = tasks.map(t => t.id);
+
+  // If projectId is specified, filter tasks by project
+  if (options?.projectId) {
+    const { data: taskProjectLinks } = await supabase
+      .from("task_projects")
+      .select("task_id")
+      .eq("project_id", options.projectId)
+      .in("task_id", taskIds);
+
+    const projectTaskIds = new Set(taskProjectLinks?.map(tp => tp.task_id) || []);
+    taskIds = taskIds.filter(id => projectTaskIds.has(id));
+
+    if (taskIds.length === 0) return [];
+  }
+
+  // Load project links
+  const { data: taskProjects } = await supabase
+    .from("task_projects")
+    .select("task_id, project_id, projects(*)")
+    .in("task_id", taskIds);
+
+  // Load labels for all tasks
+  const { data: taskLabels } = await supabase
+    .from("task_labels")
+    .select("task_id, label_id, labels(*)")
+    .in("task_id", taskIds);
+
+  // Load assignees for all tasks
+  const { data: taskAssignees } = await supabase
+    .from("task_assignees")
+    .select("task_id, user_id, profile:profiles!task_assignees_user_id_fkey(*)")
+    .in("task_id", taskIds);
+
+  const filteredTasks = options?.projectId
+    ? tasks.filter(t => taskIds.includes(t.id))
+    : tasks;
+
+  return filteredTasks.map((task) => {
+    const projectLinks = taskProjects?.filter(tp => tp.task_id === task.id) || [];
+    const projects: Project[] = [];
+
+    projectLinks.forEach(tp => {
+      if (tp.projects && typeof tp.projects === 'object' && !Array.isArray(tp.projects)) {
+        projects.push(tp.projects as unknown as Project);
+      }
+    });
+
+    const labelLinks = taskLabels?.filter(tl => tl.task_id === task.id) || [];
+    const labels: Label[] = [];
+
+    labelLinks.forEach(tl => {
+      if (tl.labels && typeof tl.labels === 'object' && !Array.isArray(tl.labels)) {
+        labels.push(tl.labels as unknown as Label);
+      }
+    });
+
+    const assigneeLinks = taskAssignees?.filter(ta => ta.task_id === task.id) || [];
+    const assignees: TaskAssignee[] = assigneeLinks.map(ta => ({
+      task_id: ta.task_id,
+      user_id: ta.user_id,
+      profile: ta.profile as unknown as Profile,
+    })) as TaskAssignee[];
+
+    return {
+      ...task,
+      projects,
+      assignees,
+      labels,
     };
   });
 }

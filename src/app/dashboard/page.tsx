@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Header } from "@/components/layout/Header";
 import { DonutChart, DonutLegend } from "@/components/charts/DonutChart";
-import { getProjects, getTasks, getProfiles, getTaskAssignees } from "@/lib/database";
+import { getProjects, getTasks, getProfiles } from "@/lib/database";
 import type { Project, TaskWithRelations, Profile } from "@/types/database";
 import { LayoutDashboard, CheckCircle2, Clock, AlertCircle } from "lucide-react";
 import Link from "next/link";
@@ -176,14 +176,11 @@ export default function DashboardPage() {
       setProjects(projectsWithStats);
       setAllTasks(tasksData);
 
-      // Calculate team stats
+      // Build assignee map from batch-loaded data for team stats
       const taskAssigneeMap: Record<string, string[]> = {};
-      await Promise.all(
-        tasksData.map(async (task) => {
-          const assignees = await getTaskAssignees(task.id);
-          taskAssigneeMap[task.id] = assignees.map((a) => a.user_id);
-        })
-      );
+      tasksData.forEach((task) => {
+        taskAssigneeMap[task.id] = (task.assignees || []).map((a) => a.user_id);
+      });
 
       const teamStatsData = profilesData.map((profile) => {
         const userTasks = tasksData.filter((task) =>

@@ -78,14 +78,11 @@ export default function ProjectPage() {
       getProjectTeamAccess(projectId),
     ]);
 
-    // Load assignees for all tasks
+    // Build assignee map from batch-loaded data
     const assigneeMap: Record<string, string[]> = {};
-    await Promise.all(
-      tasksData.map(async (task) => {
-        const assignees = await getTaskAssignees(task.id);
-        assigneeMap[task.id] = assignees.map((a) => a.user_id);
-      })
-    );
+    tasksData.forEach((task) => {
+      assigneeMap[task.id] = (task.assignees || []).map((a) => a.user_id);
+    });
     setTaskAssigneeMap(assigneeMap);
 
     setProject(projectData);

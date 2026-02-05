@@ -11,7 +11,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { FilterBar } from "@/components/ui/FilterBar";
 import { FilterChips } from "@/components/ui/FilterChips";
 import { ToggleSwitch } from "@/components/ui/ToggleSwitch";
-import { getInboxTasks, getTaskAssignees, getLabels, getProfiles } from "@/lib/database";
+import { getInboxTasks, getLabels, getProfiles, getTaskAssignees } from "@/lib/database";
 import type { TaskWithRelations, Label, Profile } from "@/types/database";
 import { Inbox as InboxIcon, Check, Flag, Calendar } from "lucide-react";
 import { filterTasks } from "@/components/filters/TaskFilters";
@@ -65,14 +65,11 @@ export default function InboxPage() {
       getProfiles(),
     ]);
 
-    // Build assignee map
+    // Build assignee map from batch-loaded data
     const assigneeMap: Record<string, string[]> = {};
-    await Promise.all(
-      data.map(async (task) => {
-        const assignees = await getTaskAssignees(task.id);
-        assigneeMap[task.id] = assignees.map((a) => a.user_id);
-      })
-    );
+    data.forEach((task) => {
+      assigneeMap[task.id] = (task.assignees || []).map((a) => a.user_id);
+    });
 
     const active = data.filter((t) => t.status !== "done");
     const completed = data.filter((t) => t.status === "done");

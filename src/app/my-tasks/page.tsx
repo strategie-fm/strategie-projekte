@@ -11,7 +11,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { FilterBar } from "@/components/ui/FilterBar";
 import { FilterChips } from "@/components/ui/FilterChips";
 import { ToggleSwitch } from "@/components/ui/ToggleSwitch";
-import { getTasks, getTaskAssignees, getLabels, getProjects, assignTask } from "@/lib/database";
+import { getTasks, getLabels, getProjects, assignTask, getTaskAssignees } from "@/lib/database";
 import { supabase } from "@/lib/supabase";
 import type { TaskWithRelations, Label, Project } from "@/types/database";
 import { User, Check, Flag, Calendar, Folder } from "lucide-react";
@@ -78,26 +78,23 @@ export default function MyTasksPage() {
       getProjects(),
     ]);
 
-    // Build assignee map and filter tasks assigned to current user
+    // Build assignee map from batch-loaded data and filter tasks assigned to current user
     const myTasks: TaskWithRelations[] = [];
     const myCompletedTasks: TaskWithRelations[] = [];
     const assigneeMap: Record<string, string[]> = {};
 
-    await Promise.all(
-      allTasks.map(async (task) => {
-        const assignees = await getTaskAssignees(task.id);
-        assigneeMap[task.id] = assignees.map((a) => a.user_id);
-        const isAssignedToMe = assignees.some((a) => a.user_id === user.id);
+    allTasks.forEach((task) => {
+      assigneeMap[task.id] = (task.assignees || []).map((a) => a.user_id);
+      const isAssignedToMe = (task.assignees || []).some((a) => a.user_id === user.id);
 
-        if (isAssignedToMe) {
-          if (task.status === "done") {
-            myCompletedTasks.push(task);
-          } else {
-            myTasks.push(task);
-          }
+      if (isAssignedToMe) {
+        if (task.status === "done") {
+          myCompletedTasks.push(task);
+        } else {
+          myTasks.push(task);
         }
-      })
-    );
+      }
+    });
 
     // Sort by priority then due date
     const sortTasks = (a: TaskWithRelations, b: TaskWithRelations) => {
