@@ -11,10 +11,11 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { FilterBar } from "@/components/ui/FilterBar";
 import { FilterChips } from "@/components/ui/FilterChips";
 import { ToggleSwitch } from "@/components/ui/ToggleSwitch";
-import { getTasks, getLabels, getProfiles, getTaskAssignees } from "@/lib/database";
-import type { TaskWithRelations, Label, Profile } from "@/types/database";
-import { CalendarDays, Check } from "lucide-react";
+import { getTasks, getLabels, getProfiles, getProjects, getTaskAssignees } from "@/lib/database";
+import type { TaskWithRelations, Label, Profile, Project } from "@/types/database";
+import { CalendarDays, Check, Flag, Calendar, Folder } from "lucide-react";
 import { filterTasks } from "@/components/filters/TaskFilters";
+import { cn } from "@/lib/utils";
 
 // Filter options
 const priorityOptions = [
@@ -29,20 +30,28 @@ const statusOptions = [
   { value: "in_progress", label: "In Arbeit" },
 ];
 
-interface GroupedTasks {
+type GroupBy = "date" | "priority" | "project";
+
+const groupByOptions: { value: GroupBy; label: string; icon: typeof Flag }[] = [
+  { value: "date", label: "Datum", icon: Calendar },
+  { value: "priority", label: "Priorität", icon: Flag },
+  { value: "project", label: "Projekt", icon: Folder },
+];
+
+interface DateGroupedTasks {
   date: string;
   label: string;
   tasks: TaskWithRelations[];
 }
 
 export default function UpcomingPage() {
-  const [groupedTasks, setGroupedTasks] = useState<GroupedTasks[]>([]);
   const [allTasks, setAllTasks] = useState<TaskWithRelations[]>([]);
   const [completedTasks, setCompletedTasks] = useState<TaskWithRelations[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedTask, setSelectedTask] = useState<TaskWithRelations | null>(null);
   const [labels, setLabels] = useState<Label[]>([]);
   const [profiles, setProfiles] = useState<Profile[]>([]);
+  const [projects, setProjects] = useState<Project[]>([]);
   const [taskAssigneeMap, setTaskAssigneeMap] = useState<Record<string, string[]>>({});
 
   // Filter state
@@ -52,7 +61,10 @@ export default function UpcomingPage() {
   const [selectedAssignees, setSelectedAssignees] = useState<string[]>([]);
   const [showCompleted, setShowCompleted] = useState(false);
 
-  const groupTasksByDate = (tasks: TaskWithRelations[]): GroupedTasks[] => {
+  // Grouping state
+  const [groupBy, setGroupBy] = useState<GroupBy>("date");
+
+  const groupTasksByDate = (tasks: TaskWithRelations[]): DateGroupedTasks[] => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
@@ -91,13 +103,42 @@ export default function UpcomingPage() {
       });
   };
 
+  const groupByPriority = (taskList: TaskWithRelations[]) => {
+    return {
+      p1: taskList.filter((t) => t.priority === "p1"),
+      p2: taskList.filter((t) => t.priority === "p2"),
+      p3: taskList.filter((t) => t.priority === "p3"),
+      p4: taskList.filter((t) => t.priority === "p4"),
+    };
+  };
+
+  const groupByProject = (taskList: TaskWithRelations[]) => {
+    const grouped: Record<string, TaskWithRelations[]> = {};
+    const noProject: TaskWithRelations[] = [];
+
+    taskList.forEach((task) => {
+      const project = task.projects?.[0];
+      if (project) {
+        if (!grouped[project.id]) {
+          grouped[project.id] = [];
+        }
+        grouped[project.id].push(task);
+      } else {
+        noProject.push(task);
+      }
+    });
+
+    return { grouped, noProject };
+  };
+
   const loadTasks = async (silent = false) => {
     if (!silent) setLoading(true);
 
-    const [tasksData, labelsData, profilesData] = await Promise.all([
+    const [tasksData, labelsData, profilesData, projectsData] = await Promise.all([
       getTasks(),
       getLabels(),
       getProfiles(),
+      getProjects(),
     ]);
 
     // Load assignees for all tasks
@@ -140,9 +181,9 @@ export default function UpcomingPage() {
 
     setAllTasks(upcoming);
     setCompletedTasks(completed);
-    setGroupedTasks(groupTasksByDate(upcoming));
     setLabels(labelsData);
     setProfiles(profilesData);
+    setProjects(projectsData);
     if (!silent) setLoading(false);
   };
 
@@ -215,18 +256,6 @@ export default function UpcomingPage() {
     };
   }, []);
 
-  // Re-group when filters change
-  useEffect(() => {
-    const filters = {
-      priorities: selectedPriorities,
-      labels: selectedLabels,
-      status: selectedStatus,
-      assignees: selectedAssignees,
-    };
-    const filtered = filterTasks(allTasks, filters, taskAssigneeMap);
-    setGroupedTasks(groupTasksByDate(filtered));
-  }, [selectedPriorities, selectedLabels, selectedStatus, selectedAssignees, allTasks, taskAssigneeMap]);
-
   const handleTaskUpdate = (updatedTask: TaskWithRelations) => {
     if (updatedTask.status === "done") {
       // Move to completed
@@ -295,6 +324,8 @@ export default function UpcomingPage() {
   const hasActiveFilters = selectedPriorities.length > 0 || selectedLabels.length > 0 ||
                            selectedStatus.length > 0 || selectedAssignees.length > 0;
 
+  // Apply filters
+  const filteredTasks = filterTasks(allTasks, filters, taskAssigneeMap);
   const filteredCompleted = filterTasks(completedTasks, filters, taskAssigneeMap);
 
   // Get unique label IDs from upcoming tasks
@@ -327,6 +358,130 @@ export default function UpcomingPage() {
   // Get today's date string for variant comparison
   const todayString = new Date().toISOString().split("T")[0];
 
+  // Render task item helper
+  const renderTaskItem = (task: TaskWithRelations, showProjectBadge = true) => (
+    <SortableTaskItem
+      key={task.id}
+      task={task}
+      onUpdate={handleTaskUpdate}
+      onClick={handleTaskClick}
+      onDelete={handleTaskDelete}
+      showProject={showProjectBadge}
+      hideDragHandle
+      isSelected={selectedTask?.id === task.id}
+    />
+  );
+
+  // Render grouped tasks based on groupBy
+  const renderGroupedTasks = () => {
+    if (filteredTasks.length === 0) {
+      return (
+        <EmptyState
+          icon={CalendarDays}
+          title={hasActiveFilters ? "Keine Aufgaben mit diesen Filtern" : "Keine anstehenden Aufgaben"}
+          description={hasActiveFilters ? "Passe die Filter an" : "Aufgaben mit Fälligkeitsdatum erscheinen hier"}
+        />
+      );
+    }
+
+    if (groupBy === "date") {
+      const grouped = groupTasksByDate(filteredTasks);
+      return (
+        <>
+          {grouped.map((group) => (
+            <section key={group.date} className="mb-6">
+              <SectionHeader
+                title={group.label}
+                count={group.tasks.length}
+                variant={group.date === todayString ? "default" : "info"}
+              />
+              <div className="flex flex-col gap-2">
+                {group.tasks.map((task) => renderTaskItem(task))}
+              </div>
+            </section>
+          ))}
+        </>
+      );
+    }
+
+    if (groupBy === "priority") {
+      const grouped = groupByPriority(filteredTasks);
+      return (
+        <>
+          {grouped.p1.length > 0 && (
+            <section className="mb-6">
+              <SectionHeader title="Priorität 1 - Dringend" count={grouped.p1.length} variant="error" />
+              <div className="flex flex-col gap-2">{grouped.p1.map((t) => renderTaskItem(t))}</div>
+            </section>
+          )}
+          {grouped.p2.length > 0 && (
+            <section className="mb-6">
+              <SectionHeader title="Priorität 2 - Hoch" count={grouped.p2.length} variant="warning" />
+              <div className="flex flex-col gap-2">{grouped.p2.map((t) => renderTaskItem(t))}</div>
+            </section>
+          )}
+          {grouped.p3.length > 0 && (
+            <section className="mb-6">
+              <SectionHeader title="Priorität 3 - Normal" count={grouped.p3.length} variant="info" />
+              <div className="flex flex-col gap-2">{grouped.p3.map((t) => renderTaskItem(t))}</div>
+            </section>
+          )}
+          {grouped.p4.length > 0 && (
+            <section className="mb-6">
+              <SectionHeader title="Priorität 4 - Niedrig" count={grouped.p4.length} variant="muted" />
+              <div className="flex flex-col gap-2">{grouped.p4.map((t) => renderTaskItem(t))}</div>
+            </section>
+          )}
+        </>
+      );
+    }
+
+    if (groupBy === "project") {
+      const grouped = groupByProject(filteredTasks);
+      // Sort project IDs alphabetically by project name
+      const projectIds = Object.keys(grouped.grouped).sort((a, b) => {
+        const projectA = projects.find((p) => p.id === a);
+        const projectB = projects.find((p) => p.id === b);
+        return (projectA?.name || "").localeCompare(projectB?.name || "", "de");
+      });
+
+      return (
+        <>
+          {projectIds.map((projectId) => {
+            const project = projects.find((p) => p.id === projectId);
+            const projectTasks = grouped.grouped[projectId];
+            if (!project || projectTasks.length === 0) return null;
+
+            return (
+              <section key={projectId} className="mb-6">
+                <div className="flex items-center gap-2 mb-3">
+                  <span
+                    className="w-3 h-3 rounded-sm"
+                    style={{ backgroundColor: project.color }}
+                  />
+                  <h2 className="text-label-lg text-text-secondary">
+                    {project.name} ({projectTasks.length})
+                  </h2>
+                </div>
+                <div className="flex flex-col gap-2">
+                  {projectTasks.map((t) => renderTaskItem(t, false))}
+                </div>
+              </section>
+            );
+          })}
+          {grouped.noProject.length > 0 && (
+            <section className="mb-6">
+              <SectionHeader title="Eingang (Kein Projekt)" count={grouped.noProject.length} variant="muted" />
+              <div className="flex flex-col gap-2">{grouped.noProject.map((t) => renderTaskItem(t, false))}</div>
+            </section>
+          )}
+        </>
+      );
+    }
+
+    return null;
+  };
+
   return (
     <AppLayout>
       <Header title="Anstehend" subtitle="Kommende Aufgaben" />
@@ -336,6 +491,31 @@ export default function UpcomingPage() {
           onReset={handleResetFilters}
           showReset={hasActiveFilters || showCompleted}
         >
+          {/* Grouping Segmented Control */}
+          <div className="flex items-center gap-1 px-1 py-1 bg-divider rounded-lg">
+            {groupByOptions.map((option) => {
+              const Icon = option.icon;
+              const isActive = groupBy === option.value;
+              return (
+                <button
+                  key={option.value}
+                  onClick={() => setGroupBy(option.value)}
+                  className={cn(
+                    "flex items-center gap-1.5 px-3 py-1.5 rounded-md text-body-md font-medium transition-all",
+                    isActive
+                      ? "bg-surface text-primary shadow-sm"
+                      : "text-text-muted hover:text-text-primary"
+                  )}
+                >
+                  <Icon className="w-4 h-4" />
+                  {option.label}
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="w-px h-6 bg-border" />
+
           <FilterChips
             label="Priorität"
             options={priorityOptions}
@@ -383,39 +563,7 @@ export default function UpcomingPage() {
             </div>
           ) : (
             <>
-              {groupedTasks.length > 0 ? (
-                <>
-                  {groupedTasks.map((group) => (
-                    <section key={group.date} className="mb-6">
-                      <SectionHeader
-                        title={group.label}
-                        count={group.tasks.length}
-                        variant={group.date === todayString ? "default" : "info"}
-                      />
-                      <div className="flex flex-col gap-2">
-                        {group.tasks.map((task) => (
-                          <SortableTaskItem
-                            key={task.id}
-                            task={task}
-                            onUpdate={handleTaskUpdate}
-                            onClick={handleTaskClick}
-                            onDelete={handleTaskDelete}
-                            showProject
-                            hideDragHandle
-                            isSelected={selectedTask?.id === task.id}
-                          />
-                        ))}
-                      </div>
-                    </section>
-                  ))}
-                </>
-              ) : (
-                <EmptyState
-                  icon={CalendarDays}
-                  title={hasActiveFilters ? "Keine Aufgaben mit diesen Filtern" : "Keine anstehenden Aufgaben"}
-                  description={hasActiveFilters ? "Passe die Filter an" : "Aufgaben mit Fälligkeitsdatum erscheinen hier"}
-                />
-              )}
+              {renderGroupedTasks()}
 
               {/* Erledigte Section */}
               {showCompleted && filteredCompleted.length > 0 && (
@@ -427,18 +575,7 @@ export default function UpcomingPage() {
                     variant="muted"
                   />
                   <div className="flex flex-col gap-2">
-                    {filteredCompleted.map((task) => (
-                      <SortableTaskItem
-                        key={task.id}
-                        task={task}
-                        onUpdate={handleTaskUpdate}
-                        onClick={handleTaskClick}
-                        onDelete={handleTaskDelete}
-                        showProject
-                        hideDragHandle
-                        isSelected={selectedTask?.id === task.id}
-                      />
-                    ))}
+                    {filteredCompleted.map((task) => renderTaskItem(task))}
                   </div>
                 </section>
               )}
