@@ -30,8 +30,10 @@ interface SectionListProps {
   onSectionsChange: (sections: Section[]) => void;
   onTaskUpdate: (task: TaskWithRelations) => void;
   onTaskClick: (task: TaskWithRelations) => void;
+  onTaskDelete?: (taskId: string) => void;
   onTasksReorder: (tasks: TaskWithRelations[]) => void;
   onNewRecurringTask?: (task: TaskWithRelations) => void;
+  selectedTaskId?: string;
 }
 
 export function SectionList({
@@ -41,8 +43,10 @@ export function SectionList({
   onSectionsChange,
   onTaskUpdate,
   onTaskClick,
+  onTaskDelete,
   onTasksReorder,
   onNewRecurringTask,
+  selectedTaskId,
 }: SectionListProps) {
   const [showNewSection, setShowNewSection] = useState(false);
   const [newSectionName, setNewSectionName] = useState("");
@@ -194,8 +198,10 @@ export function SectionList({
                       task={task}
                       onUpdate={onTaskUpdate}
                       onClick={onTaskClick}
+                      onDelete={onTaskDelete}
                       onNewRecurringTask={onNewRecurringTask}
                       showProject={false}
+                      isSelected={selectedTaskId === task.id}
                     />
                   ))}
                 </div>
@@ -301,8 +307,10 @@ export function SectionList({
                             task={task}
                             onUpdate={onTaskUpdate}
                             onClick={onTaskClick}
+                            onDelete={onTaskDelete}
                             onNewRecurringTask={onNewRecurringTask}
                             showProject={false}
+                            isSelected={selectedTaskId === task.id}
                           />
                         ))
                       ) : (
