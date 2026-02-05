@@ -10,7 +10,6 @@ import { TaskDetailView } from "@/components/tasks/TaskDetailView";
 import { ProjectSettingsModal } from "@/components/projects/ProjectSettingsModal";
 import { SectionList } from "@/components/sections/SectionList";
 import { SectionHeader } from "@/components/ui/SectionHeader";
-import { EmptyState } from "@/components/ui/EmptyState";
 import { FilterBar } from "@/components/ui/FilterBar";
 import { FilterChips } from "@/components/ui/FilterChips";
 import { ToggleSwitch } from "@/components/ui/ToggleSwitch";
@@ -23,9 +22,8 @@ import {
   getTaskAssignees,
 } from "@/lib/database";
 import type { Project, TaskWithRelations, Section, Label, Profile } from "@/types/database";
-import { FolderOpen, Settings, Check } from "lucide-react";
+import { Settings, Check } from "lucide-react";
 import { filterTasks } from "@/components/filters/TaskFilters";
-import { DonutChart, DonutLegend } from "@/components/charts/DonutChart";
 
 // Filter options
 const priorityOptions = [
@@ -216,17 +214,13 @@ export default function ProjectPage() {
     return true;
   });
 
-  const activeTasks = filteredTasks.filter((t) => t.status !== "done");
   const completedTasks = filteredTasks.filter((t) => t.status === "done");
 
-  // Count for header (unfiltered)
-  const totalActiveTasks = tasks.filter((t) => t.status !== "done").length;
-
-  // Label options for filter
+  // Label options for filter (use 'color' for hex colors, which renders as colored buttons)
   const labelOptions = labels.map((label) => ({
     value: label.id,
     label: label.name,
-    dotColor: label.color,
+    color: label.color,
   }));
 
   // Assignee options for filter
@@ -285,20 +279,20 @@ export default function ProjectPage() {
             selected={selectedStatus}
             onChange={setSelectedStatus}
           />
-          {labelOptions.length > 0 && (
-            <FilterChips
-              label="Labels"
-              options={labelOptions}
-              selected={selectedLabels}
-              onChange={setSelectedLabels}
-            />
-          )}
           {assigneeOptions.length > 0 && (
             <FilterChips
               label="Zugewiesen"
               options={assigneeOptions}
               selected={selectedAssignees}
               onChange={setSelectedAssignees}
+            />
+          )}
+          {labelOptions.length > 0 && (
+            <FilterChips
+              label="Labels"
+              options={labelOptions}
+              selected={selectedLabels}
+              onChange={setSelectedLabels}
             />
           )}
           {completedTasks.length > 0 && (
@@ -312,164 +306,54 @@ export default function ProjectPage() {
       )}
 
       <div className="pt-6 flex gap-6">
-        {/* Left Column: Project Stats + Sections + Tasks */}
+        {/* Left Column: Sections + Tasks */}
         <div className="flex-1 min-w-0">
-          {/* Project Header with Color */}
-          <div className="mb-6">
-            <div className="flex items-center gap-2 text-sm text-text-secondary">
-              <span
-                className="w-3 h-3 rounded"
-                style={{ backgroundColor: project.color }}
-              />
-              <span>
-                {activeTasks.length} Aufgaben
-                {hasActiveFilters ? ` von ${totalActiveTasks}` : ""}
-              </span>
-            </div>
-          </div>
+          {/* Tasks with Sections - Always show to allow creating sections */}
+          <section className="mb-6">
+            <SectionList
+              projectId={projectId}
+              sections={sections}
+              tasks={filteredTasks}
+              onSectionsChange={setSections}
+              onTaskUpdate={handleTaskUpdate}
+              onTaskClick={handleTaskClick}
+              onTaskDelete={handleTaskDelete}
+              selectedTaskId={selectedTask?.id}
+              onTasksReorder={(reorderedTasks) => {
+                const filteredIds = new Set(reorderedTasks.map(t => t.id));
+                const unchangedTasks = tasks.filter(t => !filteredIds.has(t.id));
+                setTasks([...unchangedTasks, ...reorderedTasks]);
+              }}
+              onNewRecurringTask={handleNewRecurringTask}
+            />
 
-          {/* Donut Charts */}
-          {tasks.length > 0 && (
-            <div className="bg-surface rounded-xl border border-border p-6 mb-6">
-              <div className="flex items-start justify-around gap-8">
-                {/* Status Donut */}
-                <div className="flex flex-col items-center gap-4">
-                  <DonutChart
-                    size={120}
-                    strokeWidth={14}
-                    title="Status"
-                    segments={[
-                      { value: tasks.filter(t => t.status === "todo").length, color: "#e0e0e0", label: "Offen" },
-                      { value: tasks.filter(t => t.status === "in_progress").length, color: "#183c6c", label: "In Arbeit" },
-                      { value: tasks.filter(t => t.status === "done").length, color: "#059669", label: "Erledigt" },
-                    ]}
-                  />
-                  <DonutLegend
-                    segments={[
-                      { value: tasks.filter(t => t.status === "todo").length, color: "#e0e0e0", label: "Offen" },
-                      { value: tasks.filter(t => t.status === "in_progress").length, color: "#183c6c", label: "In Arbeit" },
-                      { value: tasks.filter(t => t.status === "done").length, color: "#059669", label: "Erledigt" },
-                    ]}
-                  />
-                </div>
-
-                {/* Priority Donut */}
-                <div className="flex flex-col items-center gap-4">
-                  <DonutChart
-                    size={120}
-                    strokeWidth={14}
-                    title="Priorität"
-                    segments={[
-                      { value: tasks.filter(t => t.priority === "p1").length, color: "#dc2626", label: "P1" },
-                      { value: tasks.filter(t => t.priority === "p2").length, color: "#f59e0b", label: "P2" },
-                      { value: tasks.filter(t => t.priority === "p3").length, color: "#3b82f6", label: "P3" },
-                      { value: tasks.filter(t => t.priority === "p4").length, color: "#e0e0e0", label: "P4" },
-                    ]}
-                  />
-                  <DonutLegend
-                    segments={[
-                      { value: tasks.filter(t => t.priority === "p1").length, color: "#dc2626", label: "P1" },
-                      { value: tasks.filter(t => t.priority === "p2").length, color: "#f59e0b", label: "P2" },
-                      { value: tasks.filter(t => t.priority === "p3").length, color: "#3b82f6", label: "P3" },
-                      { value: tasks.filter(t => t.priority === "p4").length, color: "#e0e0e0", label: "P4" },
-                    ]}
-                  />
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Tasks with Sections */}
-          {activeTasks.length > 0 || sections.length > 0 ? (
-            <section className="mb-6">
-              <SectionList
-                projectId={projectId}
-                sections={sections}
-                tasks={filteredTasks}
-                onSectionsChange={setSections}
-                onTaskUpdate={handleTaskUpdate}
-                onTaskClick={handleTaskClick}
-                onTaskDelete={handleTaskDelete}
-                selectedTaskId={selectedTask?.id}
-                onTasksReorder={(reorderedTasks) => {
-                  const filteredIds = new Set(reorderedTasks.map(t => t.id));
-                  const unchangedTasks = tasks.filter(t => !filteredIds.has(t.id));
-                  setTasks([...unchangedTasks, ...reorderedTasks]);
-                }}
-                onNewRecurringTask={handleNewRecurringTask}
-              />
-
-              {/* Completed Tasks */}
-              {showCompleted && completedTasks.length > 0 && (
-                <section className="mt-6">
-                  <SectionHeader
-                    title="Erledigt"
-                    count={completedTasks.length}
-                    icon={Check}
-                    variant="muted"
-                  />
-                  <div className="flex flex-col gap-2">
-                    {completedTasks.map((task) => (
-                      <SortableTaskItem
-                        key={task.id}
-                        task={task}
-                        onUpdate={handleTaskUpdate}
-                        onClick={handleTaskClick}
-                        onDelete={handleTaskDelete}
-                        onNewRecurringTask={handleNewRecurringTask}
-                        showProject={false}
-                        hideDragHandle
-                        isSelected={selectedTask?.id === task.id}
-                      />
-                    ))}
-                  </div>
-                </section>
-              )}
-            </section>
-          ) : (
-            <section className="mb-6">
-              {completedTasks.length > 0 ? (
-                <>
-                  <EmptyState
-                    icon={FolderOpen}
-                    title="Alle Aufgaben erledigt! 🎉"
-                    description="Füge neue Aufgaben hinzu oder zeige erledigte an"
-                  />
-                  {showCompleted && (
-                    <section className="mt-6">
-                      <SectionHeader
-                        title="Erledigt"
-                        count={completedTasks.length}
-                        icon={Check}
-                        variant="muted"
-                      />
-                      <div className="flex flex-col gap-2">
-                        {completedTasks.map((task) => (
-                          <SortableTaskItem
-                            key={task.id}
-                            task={task}
-                            onUpdate={handleTaskUpdate}
-                            onClick={handleTaskClick}
-                            onDelete={handleTaskDelete}
-                            onNewRecurringTask={handleNewRecurringTask}
-                            showProject={false}
-                            hideDragHandle
-                            isSelected={selectedTask?.id === task.id}
-                          />
-                        ))}
-                      </div>
-                    </section>
-                  )}
-                </>
-              ) : (
-                <EmptyState
-                  icon={FolderOpen}
-                  title={hasActiveFilters ? "Keine Aufgaben mit diesen Filtern" : "Keine Aufgaben in dieser Aufgabenliste"}
-                  description={hasActiveFilters ? "Passe die Filter an" : "Füge deine erste Aufgabe hinzu"}
+            {/* Completed Tasks */}
+            {showCompleted && completedTasks.length > 0 && (
+              <section className="mt-6">
+                <SectionHeader
+                  title="Erledigt"
+                  count={completedTasks.length}
+                  icon={Check}
+                  variant="muted"
                 />
-              )}
-            </section>
-          )}
+                <div className="flex flex-col gap-2">
+                  {completedTasks.map((task) => (
+                    <SortableTaskItem
+                      key={task.id}
+                      task={task}
+                      onUpdate={handleTaskUpdate}
+                      onClick={handleTaskClick}
+                      onDelete={handleTaskDelete}
+                      onNewRecurringTask={handleNewRecurringTask}
+                      showProject={false}
+                      hideDragHandle
+                      isSelected={selectedTask?.id === task.id}
+                    />
+                  ))}
+                </div>
+              </section>
+            )}
+          </section>
 
           <QuickAddTask projectId={projectId} onTaskCreated={handleTaskCreated} />
         </div>
