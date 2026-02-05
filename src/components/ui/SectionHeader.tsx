@@ -4,7 +4,7 @@ import { ReactNode } from "react";
 import { cn } from "@/lib/utils";
 import { LucideIcon } from "lucide-react";
 
-type SectionVariant = "default" | "error" | "muted";
+type SectionVariant = "default" | "error" | "warning" | "info" | "muted";
 
 interface SectionHeaderProps {
   title: string;
@@ -23,6 +23,14 @@ const variantStyles: Record<SectionVariant, { text: string; dot: string }> = {
   error: {
     text: "text-error",
     dot: "bg-error",
+  },
+  warning: {
+    text: "text-warning",
+    dot: "bg-warning",
+  },
+  info: {
+    text: "text-info",
+    dot: "bg-info",
   },
   muted: {
     text: "text-text-muted",
