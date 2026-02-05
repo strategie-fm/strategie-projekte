@@ -17,14 +17,14 @@ const priorities = [
 
 export function PrioritySelector({ value, onChange, className }: PrioritySelectorProps) {
   return (
-    <div className={cn("flex gap-1", className)}>
+    <div className={cn("flex gap-1 h-10", className)}>
       {priorities.map((p) => (
         <button
           key={p.value}
           type="button"
           onClick={() => onChange(p.value)}
           className={cn(
-            "px-2.5 py-1 rounded-lg font-medium transition-all",
+            "px-2.5 h-full rounded-lg font-medium transition-all flex items-center justify-center",
             value === p.value ? p.color : "bg-divider text-text-muted hover:bg-border"
           )}
           style={{ fontSize: "0.875rem", lineHeight: 1.5 }}

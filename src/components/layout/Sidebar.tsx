@@ -17,6 +17,7 @@ import {
   ChevronRight,
   X,
   ListTodo,
+  Archive,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { createProject } from "@/lib/database";
@@ -37,6 +38,7 @@ const navItems = [
   { href: "/inbox", icon: Inbox, label: "Eingang" },
   { href: "/search", icon: Search, label: "Suche" },
   { href: "/teams", icon: Users, label: "Teams" },
+  { href: "/archive", icon: Archive, label: "Archiv" },
 ];
 
 export function Sidebar() {
@@ -182,6 +184,10 @@ export function Sidebar() {
         case "s":
           e.preventDefault();
           router.push("/search");
+          break;
+        case "a":
+          e.preventDefault();
+          router.push("/archive");
           break;
         case "escape":
           setShowQuickAdd(false);

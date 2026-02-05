@@ -1,9 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Plus, ChevronDown, Folder, Calendar, PlayCircle, Flag } from "lucide-react";
+import { Plus, ChevronDown, Folder, Calendar, PlayCircle, Flag, Layers } from "lucide-react";
 import { createTask, getProjects } from "@/lib/database";
-import type { Task, Project, TaskWithRelations } from "@/types/database";
+import type { Task, Project, TaskWithRelations, Section } from "@/types/database";
 import { PrioritySelector } from "@/components/ui/PrioritySelector";
 import { StatusSelector } from "@/components/ui/StatusSelector";
 import { Input } from "@/components/ui/Input";
@@ -12,18 +12,21 @@ import { cn } from "@/lib/utils";
 
 interface QuickAddTaskProps {
   projectId?: string;
+  sections?: Section[];
   onTaskCreated?: (task: TaskWithRelations) => void;
 }
 
-export function QuickAddTask({ projectId, onTaskCreated }: QuickAddTaskProps) {
+export function QuickAddTask({ projectId, sections = [], onTaskCreated }: QuickAddTaskProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [title, setTitle] = useState("");
   const [priority, setPriority] = useState<Task["priority"]>("p4");
   const [status, setStatus] = useState<"todo" | "in_progress">("todo");
   const [dueDate, setDueDate] = useState("");
   const [selectedProjectId, setSelectedProjectId] = useState<string | undefined>(projectId);
+  const [selectedSectionId, setSelectedSectionId] = useState<string | undefined>(undefined);
   const [projects, setProjects] = useState<Project[]>([]);
   const [showProjectDropdown, setShowProjectDropdown] = useState(false);
+  const [showSectionDropdown, setShowSectionDropdown] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
 
   useEffect(() => {
@@ -53,6 +56,7 @@ export function QuickAddTask({ projectId, onTaskCreated }: QuickAddTaskProps) {
       status,
       due_date: dueDate || undefined,
       project_id: selectedProjectId,
+      section_id: selectedSectionId,
     });
 
     if (task) {
@@ -72,7 +76,9 @@ export function QuickAddTask({ projectId, onTaskCreated }: QuickAddTaskProps) {
       if (!projectId) {
         setSelectedProjectId(undefined);
       }
+      setSelectedSectionId(undefined);
       setShowProjectDropdown(false);
+      setShowSectionDropdown(false);
       setIsOpen(false);
 
       // Notify parent - this will open the task in TaskDetailView
@@ -89,11 +95,14 @@ export function QuickAddTask({ projectId, onTaskCreated }: QuickAddTaskProps) {
     if (!projectId) {
       setSelectedProjectId(undefined);
     }
+    setSelectedSectionId(undefined);
     setShowProjectDropdown(false);
+    setShowSectionDropdown(false);
     setIsOpen(false);
   };
 
   const selectedProject = projects.find(p => p.id === selectedProjectId);
+  const selectedSection = sections.find(s => s.id === selectedSectionId);
 
   // Closed state: Show button
   if (!isOpen) {
@@ -126,32 +135,10 @@ export function QuickAddTask({ projectId, onTaskCreated }: QuickAddTaskProps) {
         autoFocus
       />
 
-      {/* Row 1: Datum / Status / Priorität */}
+      {/* Row 1: Projekt/Datum/Status/Priorität (oder Abschnitt/Datum/Status/Priorität auf Projektseite) */}
       <FormRow className="mb-4">
-        <FormField label="Datum" icon={Calendar} className="flex-1">
-          <Input
-            type="date"
-            value={dueDate}
-            onChange={(e) => setDueDate(e.target.value)}
-            className="w-full"
-          />
-        </FormField>
-        <FormField label="Status" icon={PlayCircle} className="flex-1">
-          <StatusSelector
-            value={status}
-            onChange={(value) => {
-              if (value !== "done") setStatus(value);
-            }}
-          />
-        </FormField>
-        <FormField label="Priorität" icon={Flag} className="flex-1">
-          <PrioritySelector value={priority} onChange={setPriority} />
-        </FormField>
-      </FormRow>
-
-      {/* Row 2: Projekt (nur wenn nicht auf Projektseite) */}
-      {!projectId && (
-        <FormRow className="mb-4">
+        {/* Projekt-Auswahl (nur wenn nicht auf Projektseite) */}
+        {!projectId && (
           <FormField label="Projekt" icon={Folder} className="flex-1">
             <div className="relative">
               <button
@@ -200,7 +187,7 @@ export function QuickAddTask({ projectId, onTaskCreated }: QuickAddTaskProps) {
                     >
                       Inbox (Kein Projekt)
                     </button>
-                    {projects.map((project) => (
+                    {[...projects].sort((a, b) => a.name.localeCompare(b.name)).map((project) => (
                       <button
                         key={project.id}
                         type="button"
@@ -228,8 +215,96 @@ export function QuickAddTask({ projectId, onTaskCreated }: QuickAddTaskProps) {
               )}
             </div>
           </FormField>
-        </FormRow>
-      )}
+        )}
+
+        {/* Abschnitt-Auswahl (nur auf Projektseite mit Abschnitten) */}
+        {projectId && sections.length > 0 && (
+          <FormField label="Abschnitt" icon={Layers} className="flex-1">
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setShowSectionDropdown(!showSectionDropdown)}
+                className={cn(
+                  "w-full h-10 flex items-center gap-2 px-3 rounded-lg transition-colors",
+                  selectedSection
+                    ? "bg-primary-surface text-primary"
+                    : "bg-divider text-text-secondary hover:bg-border"
+                )}
+                style={{ fontSize: "0.875rem", lineHeight: 1.5 }}
+              >
+                <span className="flex-1 text-left truncate">
+                  {selectedSection ? selectedSection.name : "Kein Abschnitt"}
+                </span>
+                <ChevronDown className="w-4 h-4 flex-shrink-0" />
+              </button>
+
+              {showSectionDropdown && (
+                <>
+                  <div
+                    className="fixed inset-0 z-40"
+                    onClick={() => setShowSectionDropdown(false)}
+                  />
+                  <div className="absolute top-full left-0 mt-1 w-56 bg-surface border border-border rounded-lg shadow-lg z-50 py-1">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedSectionId(undefined);
+                        setShowSectionDropdown(false);
+                      }}
+                      className={cn(
+                        "w-full px-4 py-2 text-left hover:bg-divider transition-colors",
+                        !selectedSectionId ? "bg-primary-surface text-primary" : "text-text-primary"
+                      )}
+                      style={{ fontSize: "0.875rem", lineHeight: 1.5 }}
+                    >
+                      Kein Abschnitt
+                    </button>
+                    {sections.map((section) => (
+                      <button
+                        key={section.id}
+                        type="button"
+                        onClick={() => {
+                          setSelectedSectionId(section.id);
+                          setShowSectionDropdown(false);
+                        }}
+                        className={cn(
+                          "w-full px-4 py-2 text-left hover:bg-divider transition-colors",
+                          selectedSectionId === section.id
+                            ? "bg-primary-surface text-primary"
+                            : "text-text-primary"
+                        )}
+                        style={{ fontSize: "0.875rem", lineHeight: 1.5 }}
+                      >
+                        {section.name}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+          </FormField>
+        )}
+
+        <FormField label="Datum" icon={Calendar} className="flex-1">
+          <Input
+            type="date"
+            value={dueDate}
+            onChange={(e) => setDueDate(e.target.value)}
+            className="w-full"
+          />
+        </FormField>
+        <FormField label="Status" icon={PlayCircle} className="flex-1">
+          <StatusSelector
+            value={status}
+            onChange={(value) => {
+              if (value !== "done") setStatus(value);
+            }}
+          />
+        </FormField>
+        <FormField label="Priorität" icon={Flag} className="flex-1">
+          <PrioritySelector value={priority} onChange={setPriority} />
+        </FormField>
+      </FormRow>
 
       {/* Actions */}
       <div className="flex items-center justify-between pt-2 border-t border-border">

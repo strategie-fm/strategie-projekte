@@ -19,14 +19,14 @@ const statuses: { value: SelectableStatus; label: string; color: string }[] = [
 
 export function StatusSelector({ value, onChange, className }: StatusSelectorProps) {
   return (
-    <div className={cn("flex gap-1", className)}>
+    <div className={cn("flex gap-1 h-10", className)}>
       {statuses.map((s) => (
         <button
           key={s.value}
           type="button"
           onClick={() => onChange(s.value)}
           className={cn(
-            "px-2.5 py-1 rounded-lg font-medium transition-all",
+            "px-2.5 h-full rounded-lg font-medium transition-all flex items-center justify-center",
             value === s.value ? s.color : "bg-divider text-text-muted hover:bg-border"
           )}
           style={{ fontSize: "0.875rem", lineHeight: 1.5 }}

@@ -3,8 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { getTeams, getProjectTeamAccess, grantProjectAccess, updateProjectAccess, revokeProjectAccess } from "@/lib/database";
 import type { Team, ProjectTeamAccess as ProjectTeamAccessType, AccessLevel } from "@/types/database";
-import { Users, Plus, X, Shield, Edit, Eye } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { Users, Plus, X, Shield, Edit, Eye, Globe } from "lucide-react";
 
 interface ProjectTeamAccessProps {
   projectId: string;
@@ -20,9 +19,10 @@ export function ProjectTeamAccess({ projectId }: ProjectTeamAccessProps) {
   const [teams, setTeams] = useState<Team[]>([]);
   const [projectAccess, setProjectAccess] = useState<ProjectTeamAccessType[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showAddModal, setShowAddModal] = useState(false);
+  const [showAddTeam, setShowAddTeam] = useState(false);
   const [selectedTeamId, setSelectedTeamId] = useState<string>("");
-  const [selectedAccessLevel, setSelectedAccessLevel] = useState<AccessLevel>("view");
+  const [selectedAccessLevel, setSelectedAccessLevel] = useState<AccessLevel>("edit");
+  const [isAdding, setIsAdding] = useState(false);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -40,15 +40,17 @@ export function ProjectTeamAccess({ projectId }: ProjectTeamAccessProps) {
   }, [loadData]);
 
   const handleGrantAccess = async () => {
-    if (!selectedTeamId) return;
+    if (!selectedTeamId || isAdding) return;
 
+    setIsAdding(true);
     const access = await grantProjectAccess(projectId, selectedTeamId, selectedAccessLevel);
     if (access) {
       setProjectAccess((prev) => [...prev, access]);
-      setShowAddModal(false);
+      setShowAddTeam(false);
       setSelectedTeamId("");
-      setSelectedAccessLevel("view");
+      setSelectedAccessLevel("edit");
     }
+    setIsAdding(false);
   };
 
   const handleUpdateAccess = async (teamId: string, accessLevel: AccessLevel) => {
@@ -83,26 +85,36 @@ export function ProjectTeamAccess({ projectId }: ProjectTeamAccessProps) {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-4">
-        <div>
-          <h3 className="font-semibold text-text-primary">Team-Zugriff</h3>
-          <p className="text-sm text-text-muted mt-1">
-            Bestimme welche Teams diese Aufgabenliste sehen und bearbeiten dürfen
-          </p>
-        </div>
-        {availableTeams.length > 0 && (
-          <button
-            onClick={() => setShowAddModal(true)}
-            className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-primary text-white text-sm hover:bg-primary-dark transition-colors"
-          >
-            <Plus className="w-4 h-4" />
-            Team hinzufügen
-          </button>
+      {/* Header with visibility status */}
+      <div className="flex items-center gap-3 mb-6 p-4 bg-divider/50 rounded-lg">
+        {projectAccess.length > 0 ? (
+          <>
+            <Users className="w-5 h-5 text-primary" />
+            <div>
+              <p className="text-sm font-medium text-text-primary">
+                {projectAccess.length} {projectAccess.length === 1 ? "Team hat" : "Teams haben"} Zugriff
+              </p>
+              <p className="text-xs text-text-muted">
+                Nur Teammitglieder können diese Aufgabenliste sehen
+              </p>
+            </div>
+          </>
+        ) : (
+          <>
+            <Globe className="w-5 h-5 text-text-muted" />
+            <div>
+              <p className="text-sm font-medium text-text-primary">Öffentlich</p>
+              <p className="text-xs text-text-muted">
+                Alle Benutzer können diese Aufgabenliste sehen
+              </p>
+            </div>
+          </>
         )}
       </div>
 
-      {projectAccess.length > 0 ? (
-        <div className="space-y-3">
+      {/* Team list */}
+      {projectAccess.length > 0 && (
+        <div className="space-y-2 mb-4">
           {projectAccess.map((access) => {
             const team = access.team;
             if (!team) return null;
@@ -110,26 +122,23 @@ export function ProjectTeamAccess({ projectId }: ProjectTeamAccessProps) {
             return (
               <div
                 key={access.id}
-                className="flex items-center gap-4 p-4 rounded-lg border border-border"
+                className="flex items-center gap-3 p-3 rounded-lg border border-border hover:border-primary/30 transition-colors"
               >
                 <div
-                  className="w-10 h-10 rounded-lg flex items-center justify-center text-white font-semibold text-sm"
+                  className="w-9 h-9 rounded-lg flex items-center justify-center text-white font-semibold text-xs flex-shrink-0"
                   style={{ backgroundColor: team.color }}
                 >
                   {team.name.slice(0, 2).toUpperCase()}
                 </div>
 
                 <div className="flex-1 min-w-0">
-                  <p className="font-medium text-text-primary">{team.name}</p>
-                  {team.description && (
-                    <p className="text-sm text-text-muted truncate">{team.description}</p>
-                  )}
+                  <p className="text-sm font-medium text-text-primary truncate">{team.name}</p>
                 </div>
 
                 <select
                   value={access.access_level}
                   onChange={(e) => handleUpdateAccess(access.team_id, e.target.value as AccessLevel)}
-                  className="px-3 py-1.5 rounded-lg border border-border bg-surface text-sm"
+                  className="px-2 py-1.5 rounded-lg border border-border bg-surface text-sm text-text-primary cursor-pointer hover:border-primary/50 transition-colors"
                 >
                   {ACCESS_LEVELS.map((level) => (
                     <option key={level.value} value={level.value}>
@@ -140,7 +149,7 @@ export function ProjectTeamAccess({ projectId }: ProjectTeamAccessProps) {
 
                 <button
                   onClick={() => handleRevokeAccess(access.team_id)}
-                  className="p-2 rounded-lg text-text-muted hover:text-error hover:bg-error-light transition-colors"
+                  className="p-1.5 rounded-lg text-text-muted hover:text-error hover:bg-error-light transition-colors"
                   title="Zugriff entfernen"
                 >
                   <X className="w-4 h-4" />
@@ -149,127 +158,84 @@ export function ProjectTeamAccess({ projectId }: ProjectTeamAccessProps) {
             );
           })}
         </div>
-      ) : (
-        <div className="text-center py-8 border border-dashed border-border rounded-lg">
-          <Users className="w-10 h-10 text-text-muted mx-auto mb-2" />
-          <p className="text-text-muted mb-1">Kein Team hat Zugriff</p>
-          <p className="text-sm text-text-muted mb-3">
-            Nur du kannst diese Aufgabenliste aktuell sehen
-          </p>
-          {availableTeams.length > 0 ? (
-            <button
-              onClick={() => setShowAddModal(true)}
-              className="text-sm text-primary hover:underline"
-            >
-              Team hinzufügen
-            </button>
-          ) : (
-            <p className="text-sm text-text-muted">
-              Erstelle zuerst ein Team unter &quot;Teams&quot;
-            </p>
-          )}
-        </div>
       )}
 
-      {/* Add Team Modal */}
-      {showAddModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60]">
-          <div className="bg-surface rounded-xl w-full max-w-md p-6 m-4">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-lg font-semibold text-text-primary">Team Zugriff gewähren</h2>
-              <button
-                onClick={() => setShowAddModal(false)}
-                className="p-2 rounded-lg hover:bg-divider transition-colors"
+      {/* Add Team Section */}
+      {availableTeams.length > 0 ? (
+        showAddTeam ? (
+          <div className="p-4 border border-primary/30 rounded-lg bg-primary-surface/30">
+            <div className="flex items-center gap-3 mb-4">
+              <select
+                value={selectedTeamId}
+                onChange={(e) => setSelectedTeamId(e.target.value)}
+                className="flex-1 px-3 py-2 rounded-lg border border-border bg-surface text-sm text-text-primary"
               >
-                <X className="w-5 h-5" />
-              </button>
+                <option value="">Team auswählen...</option>
+                {availableTeams.map((team) => (
+                  <option key={team.id} value={team.id}>
+                    {team.name}
+                  </option>
+                ))}
+              </select>
+
+              <select
+                value={selectedAccessLevel}
+                onChange={(e) => setSelectedAccessLevel(e.target.value as AccessLevel)}
+                className="px-3 py-2 rounded-lg border border-border bg-surface text-sm text-text-primary"
+              >
+                {ACCESS_LEVELS.map((level) => (
+                  <option key={level.value} value={level.value}>
+                    {level.label}
+                  </option>
+                ))}
+              </select>
             </div>
 
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-text-secondary mb-2">
-                  Team auswählen
-                </label>
-                <div className="space-y-2 max-h-48 overflow-y-auto">
-                  {availableTeams.map((team) => (
-                    <button
-                      key={team.id}
-                      onClick={() => setSelectedTeamId(team.id)}
-                      className={cn(
-                        "w-full flex items-center gap-3 p-3 rounded-lg transition-colors text-left",
-                        selectedTeamId === team.id
-                          ? "bg-primary-surface border border-primary"
-                          : "border border-border hover:border-primary"
-                      )}
-                    >
-                      <div
-                        className="w-8 h-8 rounded-lg flex items-center justify-center text-white font-semibold text-xs"
-                        style={{ backgroundColor: team.color }}
-                      >
-                        {team.name.slice(0, 2).toUpperCase()}
-                      </div>
-                      <div>
-                        <p className="font-medium text-text-primary">{team.name}</p>
-                        {team.description && (
-                          <p className="text-xs text-text-muted">{team.description}</p>
-                        )}
-                      </div>
-                    </button>
-                  ))}
-                </div>
+            <div className="flex items-center justify-between">
+              <p className="text-xs text-text-muted">
+                {ACCESS_LEVELS.find(l => l.value === selectedAccessLevel)?.description}
+              </p>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => {
+                    setShowAddTeam(false);
+                    setSelectedTeamId("");
+                    setSelectedAccessLevel("edit");
+                  }}
+                  className="px-3 py-1.5 text-sm text-text-secondary hover:bg-divider rounded-lg transition-colors"
+                >
+                  Abbrechen
+                </button>
+                <button
+                  onClick={handleGrantAccess}
+                  disabled={!selectedTeamId || isAdding}
+                  className="px-3 py-1.5 text-sm font-medium bg-primary text-white rounded-lg hover:bg-primary-variant disabled:opacity-50 transition-colors"
+                >
+                  {isAdding ? "Hinzufügen..." : "Hinzufügen"}
+                </button>
               </div>
-
-              <div>
-                <label className="block text-sm font-medium text-text-secondary mb-2">
-                  Zugriffsstufe
-                </label>
-                <div className="space-y-2">
-                  {ACCESS_LEVELS.map((level) => {
-                    const Icon = level.icon;
-                    return (
-                      <button
-                        key={level.value}
-                        onClick={() => setSelectedAccessLevel(level.value)}
-                        className={cn(
-                          "w-full flex items-center gap-3 p-3 rounded-lg transition-colors text-left",
-                          selectedAccessLevel === level.value
-                            ? "bg-primary-surface border border-primary"
-                            : "border border-border hover:border-primary"
-                        )}
-                      >
-                        <Icon className={cn(
-                          "w-5 h-5",
-                          selectedAccessLevel === level.value ? "text-primary" : "text-text-muted"
-                        )} />
-                        <div>
-                          <p className="font-medium text-text-primary">{level.label}</p>
-                          <p className="text-xs text-text-muted">{level.description}</p>
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-
-            <div className="flex justify-end gap-3 mt-6">
-              <button
-                onClick={() => setShowAddModal(false)}
-                className="px-4 py-2 rounded-lg border border-border text-text-secondary hover:bg-divider transition-colors"
-              >
-                Abbrechen
-              </button>
-              <button
-                onClick={handleGrantAccess}
-                disabled={!selectedTeamId}
-                className="px-4 py-2 rounded-lg bg-primary text-white hover:bg-primary-dark transition-colors disabled:opacity-50"
-              >
-                Zugriff gewähren
-              </button>
             </div>
           </div>
+        ) : (
+          <button
+            onClick={() => setShowAddTeam(true)}
+            className="w-full flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed border-border rounded-lg text-text-muted hover:border-primary hover:text-primary transition-colors"
+          >
+            <Plus className="w-4 h-4" />
+            <span className="text-sm">Team hinzufügen</span>
+          </button>
+        )
+      ) : teams.length === 0 ? (
+        <div className="text-center py-6 border border-dashed border-border rounded-lg">
+          <Users className="w-8 h-8 text-text-muted mx-auto mb-2" />
+          <p className="text-sm text-text-muted">
+            Keine Teams verfügbar
+          </p>
+          <p className="text-xs text-text-muted mt-1">
+            Erstelle zuerst ein Team unter &quot;Teams&quot;
+          </p>
         </div>
-      )}
+      ) : null}
     </div>
   );
 }

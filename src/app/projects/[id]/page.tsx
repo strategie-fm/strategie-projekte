@@ -10,6 +10,7 @@ import { TaskDetailView } from "@/components/tasks/TaskDetailView";
 import { ProjectSettingsModal } from "@/components/projects/ProjectSettingsModal";
 import { SectionList } from "@/components/sections/SectionList";
 import { SectionHeader } from "@/components/ui/SectionHeader";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { FilterBar } from "@/components/ui/FilterBar";
 import { FilterChips } from "@/components/ui/FilterChips";
 import { ToggleSwitch } from "@/components/ui/ToggleSwitch";
@@ -20,9 +21,10 @@ import {
   getLabels,
   getProfiles,
   getTaskAssignees,
+  getProjectTeamAccess,
 } from "@/lib/database";
-import type { Project, TaskWithRelations, Section, Label, Profile } from "@/types/database";
-import { Settings, Check } from "lucide-react";
+import type { Project, TaskWithRelations, Section, Label, Profile, ProjectTeamAccess } from "@/types/database";
+import { Settings, Check, ClipboardList, Globe, Users } from "lucide-react";
 import { filterTasks } from "@/components/filters/TaskFilters";
 
 // Filter options
@@ -55,6 +57,7 @@ export default function ProjectPage() {
   // New state for profiles and assignees
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [taskAssigneeMap, setTaskAssigneeMap] = useState<Record<string, string[]>>({});
+  const [teamAccess, setTeamAccess] = useState<ProjectTeamAccess[]>([]);
 
   // Filter state (separate states instead of single object)
   const [selectedPriorities, setSelectedPriorities] = useState<string[]>([]);
@@ -66,12 +69,13 @@ export default function ProjectPage() {
   const loadData = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
 
-    const [projectData, tasksData, sectionsData, labelsData, profilesData] = await Promise.all([
+    const [projectData, tasksData, sectionsData, labelsData, profilesData, teamAccessData] = await Promise.all([
       getProject(projectId),
       getTasksByProject(projectId),
       getSections(projectId),
       getLabels(),
       getProfiles(),
+      getProjectTeamAccess(projectId),
     ]);
 
     // Load assignees for all tasks
@@ -89,6 +93,7 @@ export default function ProjectPage() {
     setSections(sectionsData);
     setLabels(labelsData);
     setProfiles(profilesData);
+    setTeamAccess(teamAccessData);
     if (!silent) setLoading(false);
   }, [projectId]);
 
@@ -215,6 +220,7 @@ export default function ProjectPage() {
   });
 
   const completedTasks = filteredTasks.filter((t) => t.status === "done");
+  const openTasks = filteredTasks.filter((t) => t.status !== "done");
 
   // Label options for filter (use 'color' for hex colors, which renders as colored buttons)
   const labelOptions = labels.map((label) => ({
@@ -254,13 +260,39 @@ export default function ProjectPage() {
       <Header
         title={project.name}
         subtitle={project.description || undefined}
+        meta={
+          <div className="flex items-center gap-2">
+            {teamAccess.length > 0 ? (
+              teamAccess.map((access) => (
+                access.team && (
+                  <span
+                    key={access.id}
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-sm font-medium"
+                    style={{
+                      backgroundColor: `${access.team.color}20`,
+                      color: access.team.color,
+                    }}
+                  >
+                    <Users className="w-3 h-3" />
+                    {access.team.name}
+                  </span>
+                )
+              ))
+            ) : (
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-sm font-medium bg-divider text-text-muted">
+                <Globe className="w-3 h-3" />
+                Öffentlich
+              </span>
+            )}
+          </div>
+        }
       >
         <button
           onClick={() => setShowSettings(true)}
           className="flex items-center gap-2 px-3 py-1.5 text-sm text-text-muted hover:text-text-primary hover:bg-divider rounded-lg transition-colors"
           title="Einstellungen"
         >
-          <Settings className="w-4 h-4" />
+          <Settings className="w-5 h-5" />
         </button>
       </Header>
 
@@ -308,6 +340,15 @@ export default function ProjectPage() {
       <div className="pt-6 flex gap-6">
         {/* Left Column: Sections + Tasks */}
         <div className="flex-1 min-w-0">
+          {/* EmptyState when no tasks and no sections */}
+          {openTasks.length === 0 && sections.length === 0 && (
+            <EmptyState
+              icon={ClipboardList}
+              title={hasActiveFilters ? "Keine Aufgaben mit diesen Filtern" : "Keine Aufgaben in dieser Aufgabenliste"}
+              description={hasActiveFilters ? "Passe die Filter an" : "Erstelle deine erste Aufgabe oder einen Abschnitt"}
+            />
+          )}
+
           {/* Tasks with Sections - Always show to allow creating sections */}
           <section className="mb-6">
             <SectionList
@@ -355,7 +396,7 @@ export default function ProjectPage() {
             )}
           </section>
 
-          <QuickAddTask projectId={projectId} onTaskCreated={handleTaskCreated} />
+          <QuickAddTask projectId={projectId} sections={sections} onTaskCreated={handleTaskCreated} />
         </div>
 
         {/* Right Column: TaskDetailView (only when selected) */}

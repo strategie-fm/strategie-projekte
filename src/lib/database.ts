@@ -99,6 +99,62 @@ export async function deleteProject(id: string): Promise<boolean> {
   return true;
 }
 
+export async function archiveProject(id: string): Promise<Project | null> {
+  const { data, error } = await supabase
+    .from("projects")
+    .update({
+      archived_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", id)
+    .select()
+    .single();
+
+  if (error) {
+    console.error("Error archiving project:", error);
+    return null;
+  }
+
+  return data;
+}
+
+export async function unarchiveProject(id: string): Promise<Project | null> {
+  const { data, error } = await supabase
+    .from("projects")
+    .update({
+      archived_at: null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", id)
+    .select()
+    .single();
+
+  if (error) {
+    console.error("Error unarchiving project:", error);
+    return null;
+  }
+
+  return data;
+}
+
+export async function getArchivedProjects(): Promise<Project[]> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return [];
+
+  const { data, error } = await supabase
+    .from("projects")
+    .select("*")
+    .not("archived_at", "is", null)
+    .order("archived_at", { ascending: false });
+
+  if (error) {
+    console.error("Error fetching archived projects:", error);
+    return [];
+  }
+
+  return data || [];
+}
+
 // ============================================
 // TASKS
 // ============================================
